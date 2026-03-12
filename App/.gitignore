@@ -1,0 +1,33 @@
+# Android Studio and Gradle
+*.iml
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local configuration
+local.properties
+
+# IDE settings
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries/
+.idea/caches/
+
+# Output files
+*.apk
+*.aab
+*.dex
+*.class
+
+# Signing files (Security)
+*.jks
+*.keystore
+
+# OS specific files
+.DS_Store
+Thumbs.db
