@@ -5,24 +5,19 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -34,8 +29,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,7 +45,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toDrawable
@@ -188,8 +187,8 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
                                 lastCalcLocation = ambulanceLocation
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    } catch (_: Exception) {
+                        // Ignore error
                     }
                 }
             }
@@ -207,110 +206,178 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
             onMapClick = { _ -> }
         )
 
-        // Map Selection Mode UI
-        if (isMapSelectionMode) {
-            // Fixed Center Pin (Rapido Style)
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(56.dp).offset(y = (-28).dp),
-                        tint = if (searchType == "patient") Color.Red else Color(0xFF4CAF50)
+        // Dark Gradient for Status Bar Area
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent)
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .background(Color.Black.copy(alpha = 0.2f), CircleShape)
-                    )
-                }
-            }
+                )
+        )
 
-            // Confirm Button for Map Selection
-            Card(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Move map to set ${searchType} location",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedButton(
-                            onClick = { isMapSelectionMode = false },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Cancel")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                val center = mapView.mapCenter as GeoPoint
-                                if (searchType == "patient") {
-                                    patientLocation = center
-                                } else {
-                                    hospitalLocation = center
-                                }
-                                isMapSelectionMode = false
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (searchType == "patient") Color.Red else Color(0xFF4CAF50)
-                            )
-                        ) {
-                            Text("Confirm Location")
+        // Map Selection Mode UI
+        AnimatedVisibility(
+            visible = isMapSelectionMode,
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it }
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Fixed Center Pin (Rapido Style)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .offset(y = (-28).dp),
+                            tint = if (searchType == "patient") Color.Red else Color(0xFF4CAF50)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(Color.Black.copy(alpha = 0.2f), CircleShape)
+                        )
+                    }
+                }
+
+                // Confirm Button for Map Selection
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = "Set ${searchType.uppercase()} Location",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = Color.Black
+                        )
+                        Text(
+                            text = "Drag the map to pinpoint exactly",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { isMapSelectionMode = false },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Cancel")
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Button(
+                                onClick = {
+                                    val center = mapView.mapCenter as GeoPoint
+                                    if (searchType == "patient") {
+                                        patientLocation = center
+                                    } else {
+                                        hospitalLocation = center
+                                    }
+                                    isMapSelectionMode = false
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (searchType == "patient") Color.Red else Color(0xFF4CAF50)
+                                )
+                            ) {
+                                Text("Confirm", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
             }
-        } else {
-            // Normal Dashboard UI
+        }
+
+        if (!isMapSelectionMode) {
+            // Header Section
             SmallFloatingTopBar(onLogout = onLogout)
 
-            FloatingActionButton(
-                onClick = {
-                    mapView.controller.animateTo(ambulanceLocation)
-                    mapView.controller.setZoom(17.0)
-                },
+            // Zoom Buttons & MyLocation (Floating)
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 300.dp, end = 16.dp), // Increased padding to avoid hiding behind ControlPanel
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(12.dp)
+                    .padding(bottom = if (isTripStarted) 180.dp else 300.dp, end = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.MyLocation, contentDescription = "Center Map")
+                FloatingActionButton(
+                    onClick = { mapView.controller.zoomIn() },
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Zoom In")
+                }
+                FloatingActionButton(
+                    onClick = { mapView.controller.zoomOut() },
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = "Zoom Out")
+                }
+                FloatingActionButton(
+                    onClick = {
+                        mapView.controller.animateTo(ambulanceLocation)
+                        mapView.controller.setZoom(17.0)
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White,
+                    modifier = Modifier.size(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.MyLocation, contentDescription = "Center Map")
+                }
             }
 
-            Box(
+            // Bottom Panel
+            AnimatedContent(
+                targetState = isTripStarted,
+                transitionSpec = {
+                    slideInVertically(initialOffsetY = { it }) + fadeIn() togetherWith
+                    slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                ControlPanel(
-                    isTripStarted = isTripStarted,
-                    patientLocation = patientLocation,
-                    hospitalLocation = hospitalLocation,
-                    distance = distance,
-                    eta = eta,
-                    onSearchPatient = { searchType = "patient"; showSearchOverlay = true },
-                    onSearchHospital = { searchType = "hospital"; showSearchOverlay = true },
-                    onStartTrip = { showPatientDialog = true }
-                )
+                    .fillMaxWidth(),
+                label = "BottomPanel"
+            ) { tripStarted ->
+                Box(modifier = Modifier.padding(16.dp)) {
+                    ControlPanel(
+                        isTripStarted = tripStarted,
+                        patientLocation = patientLocation,
+                        hospitalLocation = hospitalLocation,
+                        distance = distance,
+                        eta = eta,
+                        onSearchPatient = { searchType = "patient"; showSearchOverlay = true },
+                        onSearchHospital = { searchType = "hospital"; showSearchOverlay = true },
+                        onStartTrip = { showPatientDialog = true }
+                    )
+                }
             }
         }
 
@@ -320,7 +387,6 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
                 sharedPref = sharedPref,
                 onLocationSelected = { point, name ->
                     if (searchType == "patient") {
-                        // For patient: pick a suggestion and then allow fine-tuning on the map
                         mapView.controller.setCenter(point)
                         isMapSelectionMode = true
                     } else {
@@ -336,7 +402,6 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
                 },
                 onSelectOnMap = {
                     showSearchOverlay = false
-                    // If patient location already exists, start selection at that point for editing
                     if (searchType == "patient" && patientLocation != null) {
                         mapView.controller.setCenter(patientLocation)
                     }
@@ -380,7 +445,7 @@ fun sendTripDataToServer(
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val serverUrl = "http://10.202.141.236:3000/start-trip" // Updated to use your baseURL
+            val serverUrl = "${Config.BASE_URL}/api/trips/start"
             val url = URL(serverUrl)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
@@ -391,7 +456,7 @@ fun sendTripDataToServer(
             }
 
             val json = JSONObject()
-            json.put("vehicle_id", vehicleId)
+            json.put("vehicle_number", vehicleId)
             json.put("patient_lat", patientLoc.latitude)
             json.put("patient_lon", patientLoc.longitude)
             json.put("hospital_lat", hospitalLoc.latitude)
@@ -402,8 +467,8 @@ fun sendTripDataToServer(
 
             conn.outputStream.use { it.write(json.toString().toByteArray()) }
             conn.responseCode
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
+            // Ignore error
         }
     }
 }
@@ -428,7 +493,6 @@ fun fuzzyMatch(query: String, target: String): Boolean {
     if (q.isEmpty()) return false
     if (t.contains(q)) return true
     
-    // Simple edit distance (allow 1-2 character mistakes depending on length)
     val maxErrors = if (q.length > 5) 2 else 1
     return levenshteinDistance(q, t.take(q.length + 1)) <= maxErrors
 }
@@ -458,8 +522,7 @@ fun LocationSearchOverlay(
     var searchResults by remember { mutableStateOf<List<Pair<String, GeoPoint>>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
     
-    // Bangalore Specific Data
-    val bangaloreBounds = "77.3,12.7,77.9,13.2" // viewbox for Bangalore
+    val bangaloreBounds = "77.3,12.7,77.9,13.2"
     val localPlaces = remember {
         listOf(
             "Majestic (KSR Bengaluru Station)" to GeoPoint(12.9733, 77.5736),
@@ -502,7 +565,6 @@ fun LocationSearchOverlay(
 
     LaunchedEffect(query) {
         if (query.isNotEmpty()) {
-            // 1. Instant Local Fuzzy Search
             val filteredLocal = if (type == "hospital") {
                 localHospitals.filter { fuzzyMatch(query, it.first) }
             } else {
@@ -511,7 +573,6 @@ fun LocationSearchOverlay(
             
             searchResults = filteredLocal
 
-            // 2. Network Search
             if (query.length > 2) {
                 delay(600) 
                 isSearching = true
@@ -537,7 +598,7 @@ fun LocationSearchOverlay(
                             searchResults = searchResults + newResults
                             isSearching = false
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         withContext(Dispatchers.Main) { isSearching = false }
                     }
                 }
@@ -548,60 +609,84 @@ fun LocationSearchOverlay(
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black) }
                     TextField(
                         value = query,
                         onValueChange = { query = it },
-                        placeholder = { Text(if (type == "patient") "Search Patient Location..." else "Search Hospital...") },
+                        placeholder = { Text(if (type == "patient") "Search pickup location..." else "Search hospital...") },
                         modifier = Modifier.weight(1f),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
-                        singleLine = true
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.Black)
                     )
                     if (isSearching) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear") }
+                        IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Black) }
                     }
                 }
-                HorizontalDivider()
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray)
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    // "Select on Map" Option - Only for Patient
                     if (type == "patient") {
                         item {
                             ListItem(
-                                headlineContent = { Text("Set location on map", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+                                headlineContent = { Text("Pick from Map", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                                 leadingContent = { Icon(Icons.Default.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                                modifier = Modifier.clickable { onSelectOnMap() }
+                                modifier = Modifier.clickable { onSelectOnMap() },
+                                colors = ListItemDefaults.colors(containerColor = Color.White)
                             )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(modifier = Modifier.alpha(0.5f), color = Color.LightGray)
                         }
                     }
 
                     if (query.isEmpty()) {
                         val recents = sharedPref.getStringSet("recent_hospitals", setOf())?.toList() ?: listOf()
                         if (type == "hospital" && recents.isNotEmpty()) {
-                            item { Text("Recent Hospitals", modifier = Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                            item { Text("Recent", modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray) }
                             items(recents) { name ->
-                                ListItem(headlineContent = { Text(name) }, leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                                ListItem(
+                                    headlineContent = { Text(name, color = Color.Black) },
+                                    leadingContent = { Icon(Icons.Default.History, contentDescription = null, tint = Color.Gray) },
                                     modifier = Modifier.clickable { 
                                         val point = localHospitals.find { it.first == name }?.second ?: GeoPoint(12.97, 77.59)
                                         onLocationSelected(point, name) 
-                                    })
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.White))
                             }
                         }
-                        item { Text("Common Bangalore Places", modifier = Modifier.padding(16.dp, 8.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                        item { Text("Suggestions", modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray) }
                         val defaultList = if (type == "hospital") localHospitals else localPlaces
                         items(defaultList) { (name, point) ->
-                            ListItem(headlineContent = { Text(name) }, leadingContent = { Icon(if (type == "hospital") Icons.Default.LocalHospital else Icons.Default.Place, contentDescription = null) },
-                                modifier = Modifier.clickable { onLocationSelected(point, name) })
+                            ListItem(
+                                headlineContent = { Text(name, color = Color.Black) },
+                                leadingContent = { Icon(if (type == "hospital") Icons.Default.LocalHospital else Icons.Default.Place, contentDescription = null, tint = Color.Gray) },
+                                modifier = Modifier.clickable { onLocationSelected(point, name) },
+                                colors = ListItemDefaults.colors(containerColor = Color.White)
+                            )
                         }
                     } else {
                         items(searchResults) { (name, point) ->
-                            ListItem(headlineContent = { Text(name, maxLines = 2) }, leadingContent = { Icon(if (type == "hospital") Icons.Default.LocalHospital else Icons.Default.Place, contentDescription = null) },
-                                modifier = Modifier.clickable { onLocationSelected(point, name) })
+                            ListItem(
+                                headlineContent = { Text(name, maxLines = 2, color = Color.Black) },
+                                leadingContent = { Icon(if (type == "hospital") Icons.Default.LocalHospital else Icons.Default.Place, contentDescription = null, tint = Color.Gray) },
+                                modifier = Modifier.clickable { onLocationSelected(point, name) },
+                                colors = ListItemDefaults.colors(containerColor = Color.White)
+                            )
                         }
                     }
                 }
@@ -616,18 +701,15 @@ fun createMarkerIcon(context: Context, color: Int, label: String): Drawable {
     bitmap.applyCanvas {
         val paint = Paint().apply { this.color = color; isAntiAlias = true }
         
-        // Draw Pin (Teardrop shape)
         val path = android.graphics.Path()
         path.moveTo(size/2f, size.toFloat())
         path.cubicTo(0f, size/2f, size/4f, 0f, size/2f, 0f)
         path.cubicTo(3*size/4f, 0f, size.toFloat(), size/2f, size/2f, size.toFloat())
         drawPath(path, paint)
 
-        // Draw white circle in middle
         paint.color = android.graphics.Color.WHITE
         drawCircle(size / 2f, size / 3.5f, size / 6f, paint)
         
-        // Draw Label
         paint.apply { this.color = color; textSize = 32f; textAlign = Paint.Align.CENTER; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
         drawText(label, size / 2f, size / 3.5f + 12f, paint)
     }
@@ -639,19 +721,16 @@ fun createCurrentLocationIcon(context: Context): Drawable {
     val bitmap = createBitmap(size, size, Bitmap.Config.ARGB_8888)
     bitmap.applyCanvas {
         val paint = Paint().apply { isAntiAlias = true }
-        // White background circle
         paint.color = android.graphics.Color.WHITE
-        drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        drawCircle(size / 2f, size / 2f, (size / 2f) - 5f, paint)
         
-        // Red border
         paint.color = "#FF0000".toColorInt()
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 4f
-        drawCircle(size / 2f, size / 2f, (size / 2f) - 2f, paint)
+        paint.strokeWidth = 6f
+        drawCircle(size / 2f, size / 2f, (size / 2f) - 5f, paint)
 
-        // Draw the ambulance emoji
         paint.style = Paint.Style.FILL
-        paint.textSize = 60f
+        paint.textSize = 50f
         paint.textAlign = Paint.Align.CENTER
         val xPos = size / 2f
         val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2f)
@@ -698,7 +777,6 @@ fun OSMMapView(
         patientLoc?.let {
             val pMarker = Marker(mv)
             pMarker.position = it
-            // Use Bottom-Center anchor for Pins so they don't "drift" when zooming
             pMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             pMarker.icon = createMarkerIcon(context, android.graphics.Color.RED, "P")
             mv.overlays.add(pMarker)
@@ -742,44 +820,184 @@ fun ControlPanel(
     onSearchHospital: () -> Unit,
     onStartTrip: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)) {
-        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
             if (!isTripStarted) {
-                Text(text = "Where is the patient going?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = onSearchPatient, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if (patientLocation != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary)) {
-                        Icon(Icons.Default.Person, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (patientLocation != null) "Patient Set" else "Find Patient")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onSearchHospital, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if (hospitalLocation != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary)) {
-                        Icon(Icons.Default.LocalHospital, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (hospitalLocation != null) "Hospital Set" else "Set Hospital")
-                    }
+                Text(
+                    text = "Emergency Trip Plan",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1C1E)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Destination Selectors
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LocationSelector(
+                        label = "Patient Location",
+                        value = if (patientLocation != null) "Location Set" else "Set pickup point",
+                        isSet = patientLocation != null,
+                        icon = Icons.Default.Person,
+                        color = Color.Red,
+                        onClick = onSearchPatient
+                    )
+                    LocationSelector(
+                        label = "Hospital Destination",
+                        value = if (hospitalLocation != null) "Hospital Set" else "Select hospital",
+                        isSet = hospitalLocation != null,
+                        icon = Icons.Default.LocalHospital,
+                        color = Color(0xFF4CAF50),
+                        onClick = onSearchHospital
+                    )
                 }
+                
                 if (patientLocation != null && hospitalLocation != null) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onStartTrip, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
-                        Text("START EMERGENCY TRIP", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onStartTrip,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text(
+                            "START EMERGENCY",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(Icons.Default.FlashOn, contentDescription = null)
                     }
                 }
             } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                // Trip Active UI
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column {
-                        Text("ETA to Hospital", style = MaterialTheme.typography.bodySmall)
-                        Text(eta, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.Red)
+                        Text(
+                            "ESTIMATED ARRIVAL",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            eta,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.Red
+                        )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Distance", style = MaterialTheme.typography.bodySmall)
-                        Text(distance, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Surface(
+                            color = Color(0xFFF1F3F4),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                distance,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(20.dp))
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape),
+                    color = Color.Red,
+                    trackColor = Color(0xFFF1F3F4)
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Emergency,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Trip Active - Avoid Heavy Traffic",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun LocationSelector(
+    label: String,
+    value: String,
+    isSet: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSet) color.copy(alpha = 0.08f) else Color(0xFFF8F9FA),
+        border = if (isSet) androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f)) else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = if (isSet) color else Color.White,
+                shadowElevation = if (isSet) 0.dp else 2.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (isSet) Color.White else color
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+                Text(
+                    value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isSet) Color.Black else Color.Gray
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                if (isSet) Icons.Default.CheckCircle else Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = if (isSet) color else Color.LightGray
+            )
         }
     }
 }
@@ -789,36 +1007,88 @@ fun PatientDetailsDialog(onDismiss: () -> Unit, onSubmit: (Map<String, String>) 
     var age by remember { mutableStateOf("") }
     var selectedCondition by remember { mutableStateOf("Heart Attack") }
     var selectedSeverity by remember { mutableStateOf("Critical") }
-    var notes by remember { mutableStateOf("") }
     val conditions = listOf("Heart Attack", "Heavy Blood Loss", "Fracture", "Stroke", "Accident Trauma", "Breathing Difficulty", "Other Emergency")
     val severities = listOf("Low", "Medium", "Critical")
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f), shape = RoundedCornerShape(16.dp)) {
-            Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-                Text("Patient Emergency Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = age, onValueChange = { age = it }, label = { Text("Patient Age") }, modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Emergency Condition", fontWeight = FontWeight.Bold)
-                conditions.forEach { condition ->
-                    Row(modifier = Modifier.fillMaxWidth().selectable(selected = (condition == selectedCondition), onClick = { selectedCondition = condition }).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = (condition == selectedCondition), onClick = { selectedCondition = condition })
-                        Text(condition)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Severity Level", fontWeight = FontWeight.Bold)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    severities.forEach { severity ->
-                        FilterChip(selected = (severity == selectedSeverity), onClick = { selectedSeverity = severity }, label = { Text(severity) })
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Additional Notes") }, modifier = Modifier.fillMaxWidth())
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+                Text(
+                    "Patient Details",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.Black
+                )
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { onSubmit(mapOf("age" to age, "condition" to selectedCondition, "severity" to selectedSeverity)) }, modifier = Modifier.fillMaxWidth().height(50.dp)) {
-                    Text("DONE - START TRIP")
+                
+                OutlinedTextField(
+                    value = age,
+                    onValueChange = { age = it },
+                    label = { Text("Patient Age") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    textStyle = TextStyle(color = Color.Black)
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Emergency Type", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = Color.Black)
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                conditions.forEach { condition ->
+                    Surface(
+                        onClick = { selectedCondition = condition },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (condition == selectedCondition) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = (condition == selectedCondition), onClick = { selectedCondition = condition })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(condition, color = Color.Black)
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Severity Level", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = Color.Black)
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    severities.forEach { severity ->
+                        FilterChip(
+                            selected = (severity == selectedSeverity),
+                            onClick = { selectedSeverity = severity },
+                            label = { Text(severity) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = { onSubmit(mapOf("age" to age, "condition" to selectedCondition, "severity" to selectedSeverity)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("START TRIP", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -830,16 +1100,38 @@ fun SmallFloatingTopBar(onLogout: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 40.dp, end = 16.dp), // Moved down for better accessibility
-        horizontalArrangement = Arrangement.End
+            .padding(start = 16.dp, top = 50.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // Status Badge
+        Surface(
+            color = Color.Black.copy(alpha = 0.7f),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.shadow(8.dp, RoundedCornerShape(20.dp))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(Color.Green, CircleShape)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("ONLINE", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            }
+        }
+        
         ExtendedFloatingActionButton(
             onClick = onLogout,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary,
+            containerColor = Color.White,
+            contentColor = Color.Black,
             shape = RoundedCornerShape(16.dp),
-            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
-            text = { Text("Logout") }
+            modifier = Modifier.size(width = 120.dp, height = 44.dp),
+            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            text = { Text("Logout", fontSize = 14.sp) }
         )
     }
 }
