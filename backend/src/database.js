@@ -17,6 +17,8 @@ const db = new sqlite3.Database(databasePath, (error) => {
 });
 
 db.serialize(() => {
+    db.run('PRAGMA foreign_keys = ON');
+
     db.run(`
         CREATE TABLE IF NOT EXISTS drivers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,6 +35,85 @@ db.serialize(() => {
         }
 
         console.log('Drivers table is ready');
+    });
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS govt_ambulances (
+            vehicle_number TEXT PRIMARY KEY,
+            ambulance_name TEXT NOT NULL,
+            ambulance_type TEXT NOT NULL,
+            registered_hospital TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `, (error) => {
+        if (error) {
+            console.error('Failed to create govt_ambulances table:', error.message);
+            return;
+        }
+
+        console.log('govt_ambulances table is ready');
+    });
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS driver_ambulances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            driver_id INTEGER NOT NULL,
+            vehicle_number TEXT NOT NULL,
+            registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(driver_id, vehicle_number),
+            FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+            FOREIGN KEY(vehicle_number) REFERENCES govt_ambulances(vehicle_number)
+        )
+    `, (error) => {
+        if (error) {
+            console.error('Failed to create driver_ambulances table:', error.message);
+            return;
+        }
+
+        console.log('driver_ambulances table is ready');
+    });
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS active_trips (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            driver_id INTEGER NOT NULL,
+            vehicle_number TEXT NOT NULL,
+            patient_lat REAL NOT NULL,
+            patient_lon REAL NOT NULL,
+            hospital_lat REAL NOT NULL,
+            hospital_lon REAL NOT NULL,
+            severity TEXT NOT NULL CHECK (severity IN ('CRITICAL', 'MODERATE', 'STABLE')),
+            eta_to_hospital INTEGER NOT NULL,
+            start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+            FOREIGN KEY(vehicle_number) REFERENCES govt_ambulances(vehicle_number)
+        )
+    `, (error) => {
+        if (error) {
+            console.error('Failed to create active_trips table:', error.message);
+            return;
+        }
+
+        console.log('active_trips table is ready');
+    });
+
+    db.run(`
+        INSERT OR IGNORE INTO govt_ambulances (vehicle_number, ambulance_name, ambulance_type, registered_hospital)
+        VALUES
+        ('KA19AB1023', 'LifeLine Rapid Response', 'ALS', 'City Hospital'),
+        ('KA19AB2201', 'Apollo Emergency One', 'BLS', 'Apollo Hospital'),
+        ('KA19AB3320', 'District Care Mobile', 'Patient Transport', 'District Hospital'),
+        ('KA19AB8741', 'Manipal Critical Care', 'ALS', 'Manipal Hospital'),
+        ('KA19AB8812', 'Aster Med Transit', 'BLS', 'Aster Hospital'),
+        ('KA19AB4521', 'Nitte Trauma Support', 'ALS', 'Nitte Hospital'),
+        ('KA19AB9912', 'KMC Rural Response', 'BLS', 'KMC Hospital')
+    `, (error) => {
+        if (error) {
+            console.error('Failed to seed govt_ambulances table:', error.message);
+            return;
+        }
+
+        console.log('govt_ambulances seed is ready');
     });
 });
 
@@ -65,9 +146,23 @@ function getQuery(query, params = []) {
     });
 }
 
+function allQuery(query, params = []) {
+    return new Promise((resolve, reject) => {
+        db.all(query, params, (error, rows) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+
+            resolve(rows);
+        });
+    });
+}
+
 module.exports = {
     db,
     databasePath,
     runQuery,
-    getQuery
+    getQuery,
+    allQuery
 };

@@ -1,28 +1,41 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
 const { databasePath, getQuery, runQuery } = require('./database');
+const { generateAuthToken, verifyAuthToken } = require('./authToken');
+
+const SALT_ROUNDS = 10;
 
 router.post('/register', async (req, res) => {
     const { name, phone, license_number, password } = req.body;
-
-    if (!name || !phone || !license_number) {
+    console.log("Request Came to register");
+    if (!name || !phone || !license_number || !password) {
         return res.status(400).json({
-            message: 'name, phone, and license_number are required'
+            message: 'name, phone, license_number and password are required'
         });
     }
 
     try {
+        const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
         const result = await runQuery(
             `
                 INSERT INTO drivers (name, phone, license_number, password)
                 VALUES (?, ?, ?, ?)
             `,
-            [name, phone, license_number, password || null]
+            [name, phone, license_number, passwordHash]
         );
+
+        const token = generateAuthToken({
+            id: result.lastID,
+            name,
+            phone
+        });
 
         return res.status(201).json({
             message: 'Driver registered successfully',
             driverId: result.lastID,
+            token
         });
     } catch (error) {
         if (error.message.includes('UNIQUE constraint failed')) {
@@ -32,15 +45,14 @@ router.post('/register', async (req, res) => {
         }
 
         return res.status(500).json({
-            message: 'Failed to register driver',
-            error: error.message
+            message: 'Internal Server error, Please Try again Later'
         });
     }
 });
 
 router.post('/login', async (req, res) => {
     const { phone, password } = req.body;
-
+    console.log("Request Came to login");
     if (!phone || !password) {
         return res.status(400).json({
             message: 'phone and password are required'
@@ -50,11 +62,11 @@ router.post('/login', async (req, res) => {
     try {
         const driver = await getQuery(
             `
-                SELECT id, name, phone, license_number, created_at
+                SELECT id, name, phone, license_number, password, created_at
                 FROM drivers
-                WHERE phone = ? AND password = ?
+                WHERE phone = ?
             `,
-            [phone, password]
+            [phone]
         );
 
         if (!driver) {
@@ -63,9 +75,21 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        const passwordMatch = await bcrypt.compare(password, driver.password || '');
+
+        if (!passwordMatch) {
+            return res.status(401).json({
+                message: 'Invalid phone or password'
+            });
+        }
+
+        const token = generateAuthToken(driver);
+        const { password: _passwordHash, ...driverWithoutPassword } = driver;
+
         return res.json({
             message: 'Login successful',
-            driver
+            token,
+            driver: driverWithoutPassword
         });
     } catch (error) {
         return res.status(500).json({
@@ -73,6 +97,15 @@ router.post('/login', async (req, res) => {
             error: error.message
         });
     }
+});
+
+router.get('/verify-token', verifyAuthToken, (req, res) => {
+    console.log("Arrived for verification")
+    return res.json({
+        isValid: true,
+        message: 'Token is valid',
+        user: req.user
+    });
 });
 
 router.get('/', (_req, res) => {
