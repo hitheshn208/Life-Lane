@@ -3,21 +3,6 @@ let ambulanceMarker
 let hospitalMarker
 let routeLayer
 
-function setRouteLoading(isLoading,message){
-const loader = document.getElementById("routeLoader")
-const loaderText = document.getElementById("routeLoaderText")
-
-if(!loader){
-return
-}
-
-if(loaderText && message){
-loaderText.textContent = message
-}
-
-loader.classList.toggle("hidden", !isLoading)
-}
-
 function getSelectedAmbulanceData(){
 const raw = sessionStorage.getItem("selectedAmbulanceData")
 
@@ -32,98 +17,150 @@ return null
 }
 }
 
-/* initialize map */
-
 async function getRouteGeoJsonFromOSRM(sourcePoint,destinationPoint){
-const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sourcePoint.lng},${sourcePoint.lat};${destinationPoint.lng},${destinationPoint.lat}?overview=full&geometries=geojson`
+
+const osrmUrl =
+`https://router.project-osrm.org/route/v1/driving/${sourcePoint.lng},${sourcePoint.lat};${destinationPoint.lng},${destinationPoint.lat}?overview=full&geometries=geojson`
 
 const response = await fetch(osrmUrl)
-
-if(!response.ok){
-throw new Error("Unable to load route from OSRM")
-}
-
 const payload = await response.json()
 
-if(!payload.routes || !payload.routes.length){
-throw new Error("No route returned from OSRM")
-}
-
-return {
-geojson: payload.routes[0].geometry,
-distanceMeters: payload.routes[0].distance,
-durationSeconds: payload.routes[0].duration
-}
+return payload.routes[0].geometry
 }
 
 async function initMap(data){
 
-setRouteLoading(true,"Connecting to ambulance")
-
 const startPoint = data?.source || { lat:12.9716, lng:77.5946 }
 const destinationPoint = data?.destination || { lat:12.9616, lng:77.5846 }
 
-const start = [startPoint.lat,startPoint.lng]
-
-map = L.map("map").setView(start,13)
+map = L.map("map").setView([startPoint.lat,startPoint.lng],13)
 
 L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{
-maxZoom:19
-}
+{maxZoom:19}
 ).addTo(map)
 
-/* ambulance marker */
+ambulanceMarker = L.marker([startPoint.lat,startPoint.lng]).addTo(map)
 
-ambulanceMarker = L.marker(start).addTo(map)
-
-/* hospital marker */
-
-const hospital = [destinationPoint.lat,destinationPoint.lng]
-
-hospitalMarker = L.marker(hospital).addTo(map)
+hospitalMarker = L.marker([destinationPoint.lat,destinationPoint.lng]).addTo(map)
 
 hospitalMarker.bindPopup("🏥 Hospital")
 
-try{
-const route = await getRouteGeoJsonFromOSRM(startPoint,destinationPoint)
+const loader = document.getElementById("routeLoader")
+const loaderText = document.getElementById("routeLoaderText")
 
-routeLayer = L.geoJSON(route.geojson,{
+if(loader) loader.classList.remove("hidden")
+if(loaderText) loaderText.textContent = "Loading route..."
+
+try{
+
+const routeGeo = await getRouteGeoJsonFromOSRM(startPoint,destinationPoint)
+
+routeLayer = L.geoJSON(routeGeo,{
 style:{
 color:"#2563eb",
-weight:5,
-opacity:0.85
+weight:5
 }
 }).addTo(map)
 
-if(routeLayer.getBounds && routeLayer.getBounds().isValid()){
 map.fitBounds(routeLayer.getBounds().pad(0.2))
-}else{
-const bounds = L.latLngBounds([start,hospital])
-map.fitBounds(bounds.pad(0.2))
-}
+
 }catch(error){
-console.error(error)
-setRouteLoading(true,"Route unavailable. Showing markers...")
-await new Promise(resolve => setTimeout(resolve,900))
+
+console.error("Failed to load route:", error)
+
 }
+
+if(loader) loader.classList.add("hidden")
+
+/* sidebar data */
 
 if(data){
-document.getElementById("plate").textContent = data.plate || "—"
-document.getElementById("driver").textContent = data.driver || "—"
-document.getElementById("status").textContent = data.status ? data.status.toUpperCase() : "—"
-document.getElementById("hospital").textContent = data.destinationHospital || "—"
-document.getElementById("eta").textContent = data.eta || "—"
-document.getElementById("signals").textContent = Array.isArray(data.signals) ? data.signals.length : "—"
-document.getElementById("priority").textContent = data.priority || "—"
+
+document.getElementById("hospital").textContent =
+data.destinationHospital || "—"
+
+document.getElementById("eta").textContent =
+data.eta || "—"
+
+document.getElementById("priority").textContent =
+data.priority || "—"
+
+document.getElementById("etaMinutes").textContent =
+data.remaining || "--"
+
+document.getElementById("remaining").textContent =
+`${data.remaining || "--"} min remaining`
+
+/* signals */
+
+const container = document.getElementById("signalPath")
+
+container.innerHTML = ""
+
+if(Array.isArray(data.signals)){
+
+data.signals.forEach(signal=>{
+
+const el = document.createElement("div")
+el.className="signal"
+
+const red = document.createElement("div")
+const yellow = document.createElement("div")
+const green = document.createElement("div")
+
+red.className = "light red"
+yellow.className = "light yellow"
+green.className = "light green"
+
+/* turn OFF all lights first */
+
+red.style.opacity = "0.2"
+yellow.style.opacity = "0.2"
+green.style.opacity = "0.2"
+
+/* activate correct one */
+
+if(signal.status === "red"){
+red.style.opacity = "1"
 }
 
-setRouteLoading(false)
+if(signal.status === "yellow"){
+yellow.style.opacity = "1"
+}
+
+if(signal.status === "green"){
+green.style.opacity = "1"
+}
+
+el.appendChild(red)
+el.appendChild(yellow)
+el.appendChild(green)
+
+container.appendChild(el)
+
+})
 
 }
 
-/* run map */
+}
 
-const selectedAmbulanceData = getSelectedAmbulanceData()
+}
+
+const selectedAmbulanceData = {
+plate:"KA19AB1023",
+driver:"John D Smith",
+status:"critical",
+destinationHospital:"St Martha's Hospital",
+eta:"14:35",
+priority:"HIGH",
+signals:[
+{status:"red"},
+{status:"green"},
+{status:"yellow"},
+{status:"green"}
+],
+source:{lat:12.9716,lng:77.5946},
+destination:{lat:12.9616,lng:77.5846}
+}
 initMap(selectedAmbulanceData)

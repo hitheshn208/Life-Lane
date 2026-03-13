@@ -8,40 +8,120 @@ color:white;
 .container{
 display:flex;
 height:100vh;
-position:relative;
 }
 
-/* sidebar */
-
 .sidebar{
-width:320px;
-background:#161a22;
+width:340px;
+background:#1b1f2a;
 padding:20px;
 border-right:1px solid rgba(255,255,255,0.05);
 }
 
-.ambulance-card{
-background:#1f2430;
-padding:15px;
+.card{
+background:#232836;
+padding:18px;
 border-radius:12px;
-text-align:left;
 }
 
-.ambulance-img{
-width:70px;
-display:block;
-margin:auto;
-margin-bottom:10px;
+.label{
+font-size:12px;
+color:#9ca3af;
+margin-bottom:4px;
 }
 
-.info-row{
-margin:8px 0;
-font-size:14px;
-color:#bbb;
+/* hospital */
+
+.hospital-section h2{
+margin:0;
+font-size:22px;
 }
 
-.info-row span{
-color:white;
+/* ETA */
+
+.eta-section{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-top:18px;
+}
+
+.eta-left h1{
+font-size:32px;
+margin:0;
+}
+
+#remaining{
+font-size:13px;
+color:#9ca3af;
+}
+
+/* ETA gauge */
+
+.eta-gauge{
+width:90px;
+height:90px;
+border-radius:50%;
+border:6px solid #3b82f6;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.gauge-circle span{
+font-size:22px;
+font-weight:600;
+}
+
+.gauge-circle p{
+font-size:11px;
+margin:0;
+color:#9ca3af;
+}
+
+/* signals */
+
+.signals{
+margin-top:18px;
+}
+
+.signal-path{
+display:flex;
+gap:10px;
+margin-top:8px;
+}
+
+.signal{
+width:22px;
+height:40px;
+background:#111827;
+border-radius:6px;
+padding:4px;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+align-items:center;
+}
+
+.light{
+width:10px;
+height:10px;
+border-radius:50%;
+}
+
+.red{background:#ef4444;}
+.yellow{background:#facc15;}
+.green{background:#22c55e;}
+
+.next-signal{
+font-size:12px;
+color:#9ca3af;
+margin-top:6px;
+}
+
+/* priority */
+
+.priority{
+margin-top:15px;
 font-weight:600;
 }
 
@@ -51,6 +131,8 @@ font-weight:600;
 flex:1;
 }
 
+/* loader */
+
 .route-loader{
 position:absolute;
 inset:0;
@@ -58,10 +140,8 @@ display:flex;
 flex-direction:column;
 align-items:center;
 justify-content:center;
-gap:12px;
 background:rgba(15,17,21,0.72);
-backdrop-filter:blur(2px);
-z-index:1200;
+z-index:1000;
 transition:opacity 0.2s ease;
 }
 
@@ -71,21 +151,14 @@ pointer-events:none;
 }
 
 .spinner{
-width:42px;
-height:42px;
-border:4px solid rgba(255,255,255,0.25);
+width:40px;
+height:40px;
+border:4px solid rgba(255,255,255,0.2);
 border-top-color:#3b82f6;
 border-radius:50%;
-animation:spin 0.9s linear infinite;
-}
-
-#routeLoaderText{
-margin:0;
-font-size:14px;
-font-weight:600;
-color:#e5e7eb;
+animation:spin 1s linear infinite;
 }
 
 @keyframes spin{
-to{ transform:rotate(360deg); }
+to{transform:rotate(360deg)}
 }
