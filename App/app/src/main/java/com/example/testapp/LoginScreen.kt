@@ -242,10 +242,10 @@ fun LoginScreen(onLoginSuccess: (String, String, String) -> Unit = { _, _, _ -> 
 }
 
 data class AuthResult(val isSuccess: Boolean, val message: String, val driverId: String? = null, val name: String? = null)
-
+var baseURL = "http://10.202.141.236:3000"
 private fun loginUser(phone: String, pass: String): AuthResult {
     return try {
-        val url = URL("http://10.229.137.197:3000/auth/login")
+        val url = URL("${baseURL}/auth/login")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.doOutput = true
@@ -287,7 +287,7 @@ private fun loginUser(phone: String, pass: String): AuthResult {
 
 private fun registerUser(name: String, phone: String, license: String, pass: String): AuthResult {
     return try {
-        val url = URL("http://10.229.137.197:3000/auth/register")
+        val url = URL("${baseURL}/auth/register")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.doOutput = true
