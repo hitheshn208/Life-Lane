@@ -46,6 +46,14 @@ hospitalMarker = L.marker([destinationPoint.lat,destinationPoint.lng]).addTo(map
 
 hospitalMarker.bindPopup("🏥 Hospital")
 
+const loader = document.getElementById("routeLoader")
+const loaderText = document.getElementById("routeLoaderText")
+
+if(loader) loader.classList.remove("hidden")
+if(loaderText) loaderText.textContent = "Loading route..."
+
+try{
+
 const routeGeo = await getRouteGeoJsonFromOSRM(startPoint,destinationPoint)
 
 routeLayer = L.geoJSON(routeGeo,{
@@ -56,6 +64,14 @@ weight:5
 }).addTo(map)
 
 map.fitBounds(routeLayer.getBounds().pad(0.2))
+
+}catch(error){
+
+console.error("Failed to load route:", error)
+
+}
+
+if(loader) loader.classList.add("hidden")
 
 /* sidebar data */
 

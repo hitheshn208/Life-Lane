@@ -38,6 +38,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.applyCanvas
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.toColorInt
 import com.google.android.gms.location.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -127,15 +133,17 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
 
     // Faster Routing Logic
     LaunchedEffect(ambulanceLocation, patientLocation, hospitalLocation) {
-        if (patientLocation != null && hospitalLocation != null) {
+        val pLoc = patientLocation
+        val hLoc = hospitalLocation
+        if (pLoc != null && hLoc != null) {
             val distanceMoved = lastCalcLocation?.distanceToAsDouble(ambulanceLocation) ?: Double.MAX_VALUE
             if (distanceMoved > 50 || lastCalcLocation == null) {
                 withContext(Dispatchers.IO) {
                     try {
                         val urlString = "https://router.project-osrm.org/route/v1/driving/" +
                                 "${ambulanceLocation.longitude},${ambulanceLocation.latitude};" +
-                                "${patientLocation!!.longitude},${patientLocation!!.latitude};" +
-                                "${hospitalLocation!!.longitude},${hospitalLocation!!.latitude}" +
+                                "${pLoc.longitude},${pLoc.latitude};" +
+                                "${hLoc.longitude},${hLoc.latitude}" +
                                 "?overview=full&geometries=geojson"
                         
                         val url = URL(urlString)
@@ -147,7 +155,6 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
                         
                         if (routes.length() > 0) {
                             val route = routes.getJSONObject(0)
-                            val legs = route.getJSONArray("legs")
                             
                             val geometry = route.getJSONObject("geometry")
                             val coordinates = geometry.getJSONArray("coordinates")
@@ -157,7 +164,7 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
                                 allPoints.add(GeoPoint(coord.getDouble(1), coord.getDouble(0)))
                             }
 
-                            val patientIdx = findClosestPointIndex(allPoints, patientLocation!!)
+                            val patientIdx = findClosestPointIndex(allPoints, pLoc)
                             val pPoints = allPoints.subList(0, patientIdx + 1).toList()
                             val hPoints = allPoints.subList(patientIdx, allPoints.size).toList()
                             
@@ -237,7 +244,9 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
                         hospitalLocation = point
                         val recents = sharedPref.getStringSet("recent_hospitals", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
                         recents.add(name)
-                        sharedPref.edit().putStringSet("recent_hospitals", recents).apply()
+                        sharedPref.edit {
+                            putStringSet("recent_hospitals", recents)
+                        }
                     }
                     showSearchOverlay = false
                     mapView.controller.animateTo(point)
@@ -253,13 +262,16 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
                     showPatientDialog = false
                     isTripStarted = true
                     
-                    // SEND DATA TO SERVER
-                    sendTripDataToServer(
-                        vehicleId = vehicleId,
-                        patientLoc = patientLocation!!,
-                        hospitalLoc = hospitalLocation!!,
-                        details = details
-                    )
+                    val pLoc = patientLocation
+                    val hLoc = hospitalLocation
+                    if (pLoc != null && hLoc != null) {
+                        sendTripDataToServer(
+                            vehicleId = vehicleId,
+                            patientLoc = pLoc,
+                            hospitalLoc = hLoc,
+                            details = details
+                        )
+                    }
                 }
             )
         }
@@ -416,29 +428,31 @@ fun LocationSearchOverlay(
 
 fun createMarkerIcon(context: Context, color: Int, label: String): Drawable {
     val size = 100
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    val paint = Paint().apply { this.color = color; style = Paint.Style.FILL; isAntiAlias = true }
-    canvas.drawCircle(size / 2f, size / 2f, size / 2.2f, paint)
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawCircle(size / 2f, size / 2f, size / 3f, paint)
-    paint.apply { this.color = color; textSize = 40f; textAlign = Paint.Align.CENTER; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
-    val xPos = size / 2f
-    val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2f)
-    canvas.drawText(label, xPos, yPos, paint)
-    return BitmapDrawable(context.resources, bitmap)
+    val bitmap = createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    bitmap.applyCanvas {
+        val paint = Paint().apply { this.color = color; style = Paint.Style.FILL; isAntiAlias = true }
+        drawCircle(size / 2f, size / 2f, size / 2.2f, paint)
+        paint.color = android.graphics.Color.WHITE
+        drawCircle(size / 2f, size / 2f, size / 3f, paint)
+        paint.apply { this.color = color; textSize = 40f; textAlign = Paint.Align.CENTER; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
+        val xPos = size / 2f
+        val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2f)
+        drawText(label, xPos, yPos, paint)
+    }
+    return bitmap.toDrawable(context.resources)
 }
 
 fun createCurrentLocationIcon(context: Context): Drawable {
     val size = 64
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    val paint = Paint().apply { isAntiAlias = true }
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-    paint.color = android.graphics.Color.parseColor("#2196F3")
-    canvas.drawCircle(size / 2f, size / 2f, size / 2.5f, paint)
-    return BitmapDrawable(context.resources, bitmap)
+    val bitmap = createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    bitmap.applyCanvas {
+        val paint = Paint().apply { isAntiAlias = true }
+        paint.color = android.graphics.Color.WHITE
+        drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        paint.color = "#2196F3".toColorInt()
+        drawCircle(size / 2f, size / 2f, size / 2.5f, paint)
+    }
+    return bitmap.toDrawable(context.resources)
 }
 
 @Composable
@@ -488,7 +502,7 @@ fun OSMMapView(
             val hMarker = Marker(mv)
             hMarker.position = it
             hMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-            hMarker.icon = createMarkerIcon(context, android.graphics.Color.parseColor("#4CAF50"), "H")
+            hMarker.icon = createMarkerIcon(context, "#4CAF50".toColorInt(), "H")
             mv.overlays.add(hMarker)
         }
 
@@ -503,7 +517,7 @@ fun OSMMapView(
         if (hospitalRoutePoints.isNotEmpty()) {
             val line = Polyline()
             line.setPoints(hospitalRoutePoints)
-            line.outlinePaint.color = android.graphics.Color.parseColor("#4CAF50")
+            line.outlinePaint.color = "#4CAF50".toColorInt()
             line.outlinePaint.strokeWidth = 12f
             mv.overlays.add(line)
         }

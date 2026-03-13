@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.example.testapp.ui.theme.TestAppTheme
 
 @Composable
-fun LoginScreen(onLoginSuccess: (String) -> Unit = {}) {
+fun LoginScreen(onLoginSuccess: (String, String) -> Unit = { _, _ -> }) {
     var isLoginMode by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
     var dlNumber by remember { mutableStateOf("") }
@@ -105,19 +105,19 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit = {}) {
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Full Name") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     if (!isLoginMode) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Full Name") },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
                         OutlinedTextField(
                             value = dlNumber,
                             onValueChange = { dlNumber = it },
@@ -159,11 +159,12 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit = {}) {
                         Spacer(modifier = Modifier.height(32.dp))
 
                         Button(
-                            onClick = { onLoginSuccess(phoneNumber) },
+                            onClick = { onLoginSuccess(name, phoneNumber) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
+                            enabled = name.isNotBlank() && phoneNumber.length == 10,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
@@ -180,7 +181,7 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit = {}) {
                                 .fillMaxWidth()
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
-                            enabled = phoneNumber.length == 10,
+                            enabled = phoneNumber.length == 10 && name.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
