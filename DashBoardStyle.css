@@ -186,3 +186,28 @@ border-radius:6px;
 font-size:13px;
 font-weight:600;
 }
+/* signal status light */
+
+.signal-light{
+
+width:10px;
+height:10px;
+border-radius:50%;
+margin-top:4px;
+
+}
+
+.red{
+background:#ff3b3b;
+box-shadow:0 0 8px #ff3b3b;
+}
+
+.yellow{
+background:#ffc400;
+box-shadow:0 0 8px #ffc400;
+}
+
+.green{
+background:#1dd75b;
+box-shadow:0 0 8px #1dd75b;
+}
