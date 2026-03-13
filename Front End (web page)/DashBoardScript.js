@@ -94,6 +94,8 @@ signals:[
 
 ]
 
+const API_BASE_URL = "http://localhost:3000"
+
 const container = document.getElementById("ambulanceContainer")
 
 ambulances.forEach(a=>{
@@ -159,10 +161,45 @@ ${signalsHTML}
 
 `
 
-card.onclick = () => {
+card.onclick = async () => {
 
-const data = encodeURIComponent(JSON.stringify(a))
-window.location.href = `map.html?data=${data}`
+try {
+
+const coordinatesResponse = await fetch(`${API_BASE_URL}/api/ambulances/${encodeURIComponent(a.plate)}/coordinates`)
+
+if(!coordinatesResponse.ok){
+throw new Error("Failed to get source/destination coordinates")
+}
+
+const coordinatesData = await coordinatesResponse.json()
+
+const routeResponse = await fetch(
+`${API_BASE_URL}/api/ambulances/route/geojson?sourceLat=${coordinatesData.source.lat}&sourceLng=${coordinatesData.source.lng}&destinationLat=${coordinatesData.destination.lat}&destinationLng=${coordinatesData.destination.lng}`
+)
+
+if(!routeResponse.ok){
+throw new Error("Failed to get route geojson")
+}
+
+const routeData = await routeResponse.json()
+
+const selectedAmbulanceData = {
+...a,
+driver: coordinatesData.driver || "—",
+priority: coordinatesData.priority || "—",
+source: coordinatesData.source,
+destination: coordinatesData.destination,
+routeGeoJson: routeData.geojson,
+distanceMeters: routeData.distanceMeters,
+durationSeconds: routeData.durationSeconds
+}
+
+sessionStorage.setItem("selectedAmbulanceData", JSON.stringify(selectedAmbulanceData))
+window.location.href = "WebPage2.html"
+
+} catch(error){
+alert(error.message)
+}
 
 }
 
