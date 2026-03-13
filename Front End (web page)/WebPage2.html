@@ -23,36 +23,47 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <h2>🚑 Ambulance Information</h2>
 
-<div class="ambulance-card">
+<div class="card">
 
-<img src="https://cdn-icons-png.flaticon.com/512/2967/2967350.png" class="ambulance-img">
-
-<div class="info-row">
-Plate Number: <span id="plate">—</span>
+<div class="hospital-section">
+<p class="label">Destination Hospital:</p>
+<h2 id="hospital">—</h2>
 </div>
 
-<div class="info-row">
-Driver Name: <span id="driver">—</span>
+<div class="eta-section">
+
+<div class="eta-left">
+<p class="label">Estimated Arrival:</p>
+<h1 id="eta">—</h1>
+<p id="remaining">—</p>
 </div>
 
-<div class="info-row">
-Patient Condition: <span id="status">—</span>
+<div class="eta-gauge">
+<div class="gauge-circle">
+<span id="etaMinutes">--</span>
+<p>remaining</p>
+</div>
 </div>
 
-<div class="info-row">
-Destination Hospital: <span id="hospital">—</span>
 </div>
 
-<div class="info-row">
-Estimated Arrival: <span id="eta">—</span>
+<div class="signals">
+
+<p class="label">Traffic Signal Path:</p>
+
+<div id="signalPath" class="signal-path"></div>
+
+<p class="next-signal">
+Next: <span id="nextSignal">—</span>
+</p>
+
 </div>
 
-<div class="info-row">
-Signals Ahead: <span id="signals">—</span>
-</div>
+<div class="priority">
 
-<div class="info-row">
-Priority Level: <span id="priority">—</span>
+<p class="label">Priority Level:</p>
+<span id="priority">—</span>
+
 </div>
 
 </div>
@@ -69,7 +80,6 @@ Priority Level: <span id="priority">—</span>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script src="WebPage2Script.js"></script>
 
 </body>
