@@ -1,319 +1,500 @@
-    body{
-    margin:0;
-    font-family:'Inter',sans-serif;
-    background:#f8f6f2;   /* cream background */
-    color:#1f2937;        /* dark text */
-    }
-
-    header{
-    max-width:1400px;
-    margin:auto;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    text-align:center;
-    padding:25px;
-    font-size:24px;
-    font-weight:600;
-    letter-spacing:1px;
-    }
+body{
+margin:0;
+font-family:'Inter',sans-serif;
 
-    .connection-status{
-    font-size:13px;
-    font-weight:600;
-    padding:8px 14px;
-    border-radius:999px;
-    }
-
-    .connection-status.connecting{
-    background:#fef3c7;
-    color:#92400e;
-    }
-
-    .connection-status.connected{
-    background:#dcfce7;
-    color:#166534;
-    }
+background:linear-gradient(135deg,#f8fafc,#eef2ff,#f8f6f2);
 
-    .connection-status.error{
-    background:#fee2e2;
-    color:#991b1b;
-    }
-
-    /* FILTERS */
-
-    .filters{
-    max-width:1400px;
-    margin:auto;
-    display:flex;
-    gap:15px;
-    padding:10px 20px;
-    }
-
-    .filter-pill{
-
-    padding:10px 18px;
-    border-radius:25px;
-
-    background:#ffffff;
-    border:1px solid #e5e7eb;
-
-    cursor:pointer;
-
-    transition:0.25s;
-    }
-
-    .filter-pill:hover{
-    background:#f3f4f6;
-    }
-
-    .filter-pill.active{
-    background:#3b82f6;
-    color:white;
-    }
-
-    /* DASHBOARD */
-
-    .ambulance-container{
-    padding:20px;
-    max-width:1400px;
-    margin:auto;
-    }
-
-    /* CARD */
+color:#1f2937;
+min-height:100vh;
+}
 
-    .ambulance-card{
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:20px;
-
-    background:#ffffff;
+/* HEADER */
 
-    padding:22px;
-    margin-bottom:20px;
+header{
 
-    border-radius:14px;
-
-    border:1px solid #e5e7eb;
-
-    transition:0.3s;
-    }
+max-width:1400px;
+margin:auto;
 
-    .ambulance-card:hover{
+display:flex;
+align-items:center;
+justify-content:space-between;
 
-    transform:translateY(-4px);
-    box-shadow:0 10px 25px rgba(0,0,0,0.08);
-    }
+padding:25px;
 
-    /* INFO */
+font-size:22px;
+font-weight:600;
 
-    .ambulance-info{
+backdrop-filter:blur(10px);
 
-    display:flex;
-    align-items:center;
-    gap:15px;
-    width:240px;
-    }
+background:rgba(255,255,255,0.6);
 
-    .ambulance-icon{
-    font-size:40px;
-    }
+border-bottom:1px solid #e5e7eb;
+}
 
-    .info-text h3{
-    margin:0;
-    font-size:16px;
-    }
+header h1{
+display:flex;
+align-items:center;
+gap:12px;
+}
 
-    .info-text p{
-    margin:3px 0;
-    font-size:13px;
-    color:#6b7280;
-    }
+.ambulance-svg{
+display:flex;
+align-items:center;
+justify-content:center;
 
-    /* STATUS COLORS */
+background:#fee2e2;
+padding:8px;
 
-    .status{
-    padding:4px 8px;
-    border-radius:6px;
-    font-size:12px;
-    font-weight:600;
-    color:white;
-    }
+border-radius:10px;
+}
 
-    .critical{
-    background:#ef4444;
-    }
+/* CONNECTION STATUS */
 
-    .moderate{
-    background:#f59e0b;
-    }
+.connection-status{
 
-    .stable{
-    background:#22c55e;
-    }
+font-size:13px;
+font-weight:600;
 
-    /* ROUTE */
+padding:8px 14px;
 
-    .route{
+border-radius:999px;
+}
 
-    flex:1;
-    display:flex;
-    align-items:center;
-    position:relative;
-    margin:0 30px;
-    }
+.connection-status.connecting{
+background:#fef3c7;
+color:#92400e;
+}
 
-    /* full grey route */
+.connection-status.connected{
+background:#dcfce7;
+color:#166534;
+}
 
-    .progress-line{
-
-    position:absolute;
-    height:5px;
-    background:#e5e7eb;
-    width:100%;
-    border-radius:3px;
-    }
-
-    /* ambulance progress */
-
-    .progress{
-
-    position:absolute;
-    height:5px;
-    background:#3b82f6;
-    border-radius:3px;
-    transition:0.5s ease;
-    }
-
-    /* signals container */
-
-    .signals{
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    width:100%;
-    position:relative;
-    z-index:2;
-    }
-
-    /* signal block */
-
-    .signal-block{
-
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    }
-
-    .signal{
-
-    font-size:20px;
-    }
-
-    .signal-eta{
-
-    font-size:11px;
-    margin-bottom:4px;
-    color:#6b7280;
-    }
-
-    /* hospital */
-
-    .hospital{
-
-    font-size:28px;
-    margin-left:10px;
-    }
-
-    /* ETA badge */
-
-    .eta{
-    background:#111827;
-    color:#10b981;
-    padding:7px 12px;
-    border-radius:6px;
-    font-size:13px;
-    font-weight:600;
-    }
-
-    .trip-meta{
-    flex:1;
-    display:grid;
-    grid-template-columns:repeat(2,minmax(180px,1fr));
-    gap:14px 24px;
-    }
-
-    .meta-block{
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    }
-
-    .meta-label{
-    font-size:12px;
-    color:#6b7280;
-    text-transform:uppercase;
-    letter-spacing:0.04em;
-    }
-
-    .meta-block strong{
-    font-size:14px;
-    color:#111827;
-    }
-
-    .empty-state{
-    max-width:1400px;
-    margin:30px auto;
-    padding:28px;
-    text-align:center;
-    background:#ffffff;
-    border:1px dashed #cbd5e1;
-    border-radius:16px;
-    color:#6b7280;
-    font-weight:600;
-    }
-
-    /* signal status light */
-
-    .signal-light{
-
-    width:10px;
-    height:10px;
-    border-radius:50%;
-    margin-top:4px;
-    }
-
-    .red{
-    background:#ef4444;
-    box-shadow:0 0 6px #ef4444;
-    }
-
-    .yellow{
-    background:#facc15;
-    box-shadow:0 0 6px #facc15;
-    }
-
-    .green{
-    background:#22c55e;
-    box-shadow:0 0   6px #22c55e;
-    }
-
-    @media (max-width: 980px){
-    header{
-    flex-direction:column;
-    gap:12px;
-    }
-
-    .ambulance-card{
-    flex-direction:column;
-    align-items:flex-start;
-    }
-
-    .trip-meta{
-    width:100%;
-    grid-template-columns:1fr;
-    }
-    }
+.connection-status.error{
+background:#fee2e2;
+color:#991b1b;
+}
+
+/* FILTERS */
+
+.filters{
+
+max-width:1400px;
+margin:auto;
+
+display:flex;
+gap:15px;
+
+padding:20px;
+}
+
+.filter-pill{
+
+padding:10px 18px;
+
+border-radius:25px;
+
+background:rgba(255,255,255,0.8);
+
+border:1px solid #e5e7eb;
+
+cursor:pointer;
+
+transition:all .25s;
+
+backdrop-filter:blur(6px);
+}
+
+.filter-pill:hover{
+transform:translateY(-2px);
+box-shadow:0 6px 14px rgba(0,0,0,0.08);
+}
+
+.filter-pill.active{
+
+background:linear-gradient(135deg,#3b82f6,#2563eb);
+
+color:white;
+
+border:none;
+
+box-shadow:0 4px 14px rgba(59,130,246,0.4);
+}
+
+/* DASHBOARD */
+
+.ambulance-container{
+padding:20px;
+max-width:1400px;
+margin:auto;
+}
+
+/* CARD */
+
+.ambulance-card{
+
+display:flex;
+align-items:center;
+justify-content:space-between;
+
+gap:20px;
+
+background:rgba(255,255,255,0.85);
+
+padding:22px;
+
+margin-bottom:20px;
+
+border-radius:16px;
+
+border:1px solid #e5e7eb;
+
+backdrop-filter:blur(8px);
+
+transition:all .3s;
+}
+
+.ambulance-card:hover{
+
+transform:translateY(-6px) scale(1.01);
+
+box-shadow:0 18px 40px rgba(0,0,0,0.12);
+}
+
+/* INFO */
+
+.ambulance-info{
+
+display:flex;
+align-items:center;
+
+gap:15px;
+
+width:240px;
+}
+
+.ambulance-icon{
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+width:48px;
+height:48px;
+
+border-radius:12px;
+
+background:linear-gradient(135deg,#eef2ff,#ffffff);
+
+border:1px solid #e5e7eb;
+
+color:#ef4444;
+
+box-shadow:0 4px 10px rgba(0,0,0,0.08);
+
+transition:0.3s;
+}
+
+.ambulance-card:hover .ambulance-icon{
+
+transform:scale(1.08);
+
+background:linear-gradient(135deg,#fee2e2,#ffffff);
+}
+
+.info-text h3{
+margin:0;
+font-size:16px;
+}
+
+.info-text p{
+margin:3px 0;
+font-size:13px;
+color:#6b7280;
+}
+
+/* STATUS COLORS */
+
+.status{
+
+padding:4px 8px;
+
+border-radius:6px;
+
+font-size:12px;
+
+font-weight:600;
+
+color:white;
+}
+
+.critical{
+background:#ef4444;
+}
+
+.moderate{
+background:#f59e0b;
+}
+
+.stable{
+background:#22c55e;
+}
+
+/* ROUTE */
+
+.route{
+
+flex:1;
+
+display:flex;
+
+align-items:center;
+
+position:relative;
+
+margin:0 30px;
+}
+
+/* FULL ROUTE */
+
+.progress-line{
+
+position:absolute;
+
+height:6px;
+
+background:#e5e7eb;
+
+width:100%;
+
+border-radius:4px;
+}
+
+/* PROGRESS */
+
+.progress{
+
+position:absolute;
+
+height:6px;
+
+background:linear-gradient(90deg,#3b82f6,#60a5fa);
+
+border-radius:4px;
+
+transition:0.5s ease;
+
+animation:progressGlow 2s infinite alternate;
+}
+
+@keyframes progressGlow{
+
+from{
+box-shadow:0 0 5px #3b82f6;
+}
+
+to{
+box-shadow:0 0 16px #3b82f6;
+}
+}
+
+/* SIGNALS */
+
+.signals{
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+width:100%;
+
+position:relative;
+
+z-index:2;
+}
+
+/* SIGNAL BLOCK */
+
+.signal-block{
+
+display:flex;
+
+flex-direction:column;
+
+align-items:center;
+}
+
+.signal{
+
+font-size:20px;
+}
+
+.signal-eta{
+
+font-size:11px;
+
+margin-bottom:4px;
+
+color:#6b7280;
+}
+
+/* SIGNAL LIGHT */
+
+.signal-light{
+
+width:10px;
+height:10px;
+
+border-radius:50%;
+
+margin-top:4px;
+
+animation:pulseLight 1.5s infinite;
+}
+
+@keyframes pulseLight{
+
+0%{
+transform:scale(1);
+opacity:.7;
+}
+
+50%{
+transform:scale(1.3);
+opacity:1;
+}
+
+100%{
+transform:scale(1);
+opacity:.7;
+}
+}
+
+.red{
+background:#ef4444;
+box-shadow:0 0 8px #ef4444;
+}
+
+.yellow{
+background:#facc15;
+box-shadow:0 0 8px #facc15;
+}
+
+.green{
+background:#22c55e;
+box-shadow:0 0 8px #22c55e;
+}
+
+/* HOSPITAL */
+
+.hospital{
+
+font-size:26px;
+
+margin-left:10px;
+}
+
+/* ETA */
+
+.eta{
+
+background:#111827;
+
+color:#10b981;
+
+padding:8px 14px;
+
+border-radius:8px;
+
+font-size:13px;
+
+font-weight:600;
+
+box-shadow:0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* META */
+
+.trip-meta{
+
+flex:1;
+
+display:grid;
+
+grid-template-columns:repeat(2,minmax(180px,1fr));
+
+gap:14px 24px;
+}
+
+.meta-block{
+
+display:flex;
+
+flex-direction:column;
+
+gap:4px;
+}
+
+.meta-label{
+
+font-size:12px;
+
+color:#6b7280;
+
+text-transform:uppercase;
+
+letter-spacing:0.04em;
+}
+
+.meta-block strong{
+
+font-size:14px;
+
+color:#111827;
+}
+
+/* EMPTY */
+
+.empty-state{
+
+max-width:1400px;
+
+margin:30px auto;
+
+padding:28px;
+
+text-align:center;
+
+background:white;
+
+border:2px dashed #cbd5e1;
+
+border-radius:16px;
+
+color:#6b7280;
+
+font-weight:600;
+}
+
+/* MOBILE */
+
+@media (max-width:980px){
+
+header{
+flex-direction:column;
+gap:12px;
+}
+
+.ambulance-card{
+flex-direction:column;
+align-items:flex-start;
+}
+
+.trip-meta{
+width:100%;
+grid-template-columns:1fr;
+}
+
+}
