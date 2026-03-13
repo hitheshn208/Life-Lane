@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
         val isLoggedInInitial = sharedPref.getBoolean("isLoggedIn", false)
         val savedName = sharedPref.getString("userName", "") ?: ""
         val savedVehicleId = sharedPref.getString("vehicleId", "") ?: ""
+        val savedDriverId = sharedPref.getString("driverId", "") ?: ""
 
         enableEdgeToEdge()
         setContent {
@@ -44,16 +45,19 @@ class MainActivity : ComponentActivity() {
                 }
                 var userName by remember { mutableStateOf(savedName) }
                 var vehicleId by remember { mutableStateOf(savedVehicleId) }
+                var driverId by remember { mutableStateOf(savedDriverId) }
 
                 when (currentScreen) {
                     "login" -> {
-                        LoginScreen(onLoginSuccess = { name, phone ->
+                        LoginScreen(onLoginSuccess = { name, phone, id ->
                             sharedPref.edit {
                                 putBoolean("isLoggedIn", true)
                                 putString("userName", name)
                                 putString("userPhone", phone)
+                                putString("driverId", id)
                             }
                             userName = name
+                            driverId = id
                             currentScreen = "vehicle_setup"
                         })
                     }
@@ -78,6 +82,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 vehicleId = ""
                                 userName = ""
+                                driverId = ""
                                 currentScreen = "login"
                             }
                         )

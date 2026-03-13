@@ -14,19 +14,31 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.testapp.ui.theme.TestAppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 @Composable
-fun LoginScreen(onLoginSuccess: (String, String) -> Unit = { _, _ -> }) {
+fun LoginScreen(onLoginSuccess: (String, String, String) -> Unit = { _, _, _ -> }) {
     var isLoginMode by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
     var dlNumber by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
-    var isOtpSent by remember { mutableStateOf(false) }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -83,12 +95,12 @@ fun LoginScreen(onLoginSuccess: (String, String) -> Unit = { _, _ -> }) {
             ) {
                 Tab(
                     selected = isLoginMode,
-                    onClick = { isLoginMode = true; isOtpSent = false },
+                    onClick = { isLoginMode = true; errorMessage = null },
                     text = { Text("Login") }
                 )
                 Tab(
                     selected = !isLoginMode,
-                    onClick = { isLoginMode = false; isOtpSent = false },
+                    onClick = { isLoginMode = false; errorMessage = null },
                     text = { Text("Register") }
                 )
             }
@@ -105,19 +117,19 @@ fun LoginScreen(onLoginSuccess: (String, String) -> Unit = { _, _ -> }) {
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Full Name") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     if (!isLoginMode) {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Full Name") },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         OutlinedTextField(
                             value = dlNumber,
                             onValueChange = { dlNumber = it },
@@ -144,50 +156,69 @@ fun LoginScreen(onLoginSuccess: (String, String) -> Unit = { _, _ -> }) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (isOtpSent) {
-                        OutlinedTextField(
-                            value = otp,
-                            onValueChange = { otp = it },
-                            label = { Text("OTP") },
-                            leadingIcon = { Icon(Icons.Default.VpnKey, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = null)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true
+                    )
+
+                    errorMessage?.let {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
                         )
+                    }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                        Button(
-                            onClick = { onLoginSuccess(name, phoneNumber) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            enabled = name.isNotBlank() && phoneNumber.length == 10,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
+                    Button(
+                        onClick = {
+                            isLoading = true
+                            errorMessage = null
+                            scope.launch(Dispatchers.IO) {
+                                val result = if (isLoginMode) {
+                                    loginUser(phoneNumber, password)
+                                } else {
+                                    registerUser(name, phoneNumber, dlNumber, password)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    isLoading = false
+                                    if (result.isSuccess) {
+                                        onLoginSuccess(result.name ?: name, phoneNumber, result.driverId!!)
+                                    } else {
+                                        errorMessage = result.message
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = !isLoading && (isLoginMode || (name.isNotBlank() && dlNumber.isNotBlank())) && phoneNumber.length == 10 && password.length >= 4,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
                             Text(
                                 if (isLoginMode) "Login" else "Register",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    } else {
-                        Button(
-                            onClick = { isOtpSent = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            enabled = phoneNumber.length == 10 && name.isNotBlank(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(
-                                "Get OTP",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
                         }
@@ -207,6 +238,88 @@ fun LoginScreen(onLoginSuccess: (String, String) -> Unit = { _, _ -> }) {
                 }
             }
         }
+    }
+}
+
+data class AuthResult(val isSuccess: Boolean, val message: String, val driverId: String? = null, val name: String? = null)
+
+private fun loginUser(phone: String, pass: String): AuthResult {
+    return try {
+        val url = URL("http://10.202.141.236:3000/auth/login")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.doOutput = true
+        conn.setRequestProperty("Content-Type", "application/json")
+
+        val json = JSONObject().apply {
+            put("phone", phone)
+            put("password", pass)
+        }
+
+        conn.outputStream.use { it.write(json.toString().toByteArray()) }
+        
+        val code = conn.responseCode
+        val response = if (code in 200..299) {
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+        }
+
+        when (code) {
+            200 -> {
+                val resJson = JSONObject(response)
+                val driver = resJson.getJSONObject("driver")
+                AuthResult(true, "Login successful", driver.getString("id"), driver.getString("name"))
+            }
+            400 -> AuthResult(false, "phone and password are required")
+            401 -> AuthResult(false, "Invalid phone or password")
+            500 -> {
+                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
+                val msg = resJson?.optString("message") ?: "Failed to login"
+                AuthResult(false, msg)
+            }
+            else -> AuthResult(false, "Unknown error occurred: $code")
+        }
+    } catch (e: Exception) {
+        AuthResult(false, "Could not connect to server: ${e.message}")
+    }
+}
+
+private fun registerUser(name: String, phone: String, license: String, pass: String): AuthResult {
+    return try {
+        val url = URL("http://10.202.141.236:3000/auth/register")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.doOutput = true
+        conn.setRequestProperty("Content-Type", "application/json")
+
+        val json = JSONObject().apply {
+            put("name", name)
+            put("phone", phone)
+            put("license_number", license)
+            put("password", pass)
+        }
+
+        conn.outputStream.use { it.write(json.toString().toByteArray()) }
+        
+        val code = conn.responseCode
+        val response = if (code in 200..299) {
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+        }
+
+        when (code) {
+            201 -> {
+                val resJson = JSONObject(response)
+                AuthResult(true, "Success", resJson.getString("driverId"))
+            }
+            409 -> AuthResult(false, "Phone or license number already exists")
+            500 -> AuthResult(false, "Internal Server error, Please Try again Later")
+            else -> AuthResult(false, "Unknown error occurred: $code")
+        }
+    } catch (e: Exception) {
+        AuthResult(false, "Could not connect to server: ${e.message}")
     }
 }
 
