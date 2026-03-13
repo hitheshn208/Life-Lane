@@ -105,7 +105,7 @@ const signalsHTML = a.signals.map(signal =>
 `
 <div class="signal-block">
 
-<div class="signal-eta">${signal.time}m</div>
+<div class="signal-eta">${signal.time} min</div>
 
 <div class="signal">🚦</div>
 
@@ -173,25 +173,13 @@ throw new Error("Failed to get source/destination coordinates")
 
 const coordinatesData = await coordinatesResponse.json()
 
-const routeResponse = await fetch(
-`${API_BASE_URL}/api/ambulances/route/geojson?sourceLat=${coordinatesData.source.lat}&sourceLng=${coordinatesData.source.lng}&destinationLat=${coordinatesData.destination.lat}&destinationLng=${coordinatesData.destination.lng}`
-)
-
-if(!routeResponse.ok){
-throw new Error("Failed to get route geojson")
-}
-
-const routeData = await routeResponse.json()
-
 const selectedAmbulanceData = {
 ...a,
 driver: coordinatesData.driver || "—",
 priority: coordinatesData.priority || "—",
 source: coordinatesData.source,
 destination: coordinatesData.destination,
-routeGeoJson: routeData.geojson,
-distanceMeters: routeData.distanceMeters,
-durationSeconds: routeData.durationSeconds
+destinationHospital: a.destination
 }
 
 sessionStorage.setItem("selectedAmbulanceData", JSON.stringify(selectedAmbulanceData))

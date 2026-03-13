@@ -39,8 +39,8 @@ const ambulanceRouteData = {
         priority: 'High'
     },
     KA19AB9912: {
-        source: { lat: 12.9150, lng: 77.6250 },
-        destination: { lat: 12.8700, lng: 77.6520 },
+        source: { lat: 12.908327093540354, lng: 74.85458352719478 },
+        destination: { lat: 12.85906366568675, lng: 74.84803097338418 },
         driver: 'Naveen M',
         priority: 'Low'
     }
@@ -49,6 +49,7 @@ const ambulanceRouteData = {
 router.get('/:plate/coordinates', (req, res) => {
     const plate = req.params.plate;
     const data = ambulanceRouteData[plate];
+    console.log('Received coordinates request for', plate);
 
     if (!data) {
         return res.status(404).json({
@@ -64,60 +65,6 @@ router.get('/:plate/coordinates', (req, res) => {
         driver: data.driver,
         priority: data.priority
     });
-});
-
-router.get('/route/geojson', async (req, res) => {
-    const { sourceLat, sourceLng, destinationLat, destinationLng } = req.query;
-
-    if (!sourceLat || !sourceLng || !destinationLat || !destinationLng) {
-        return res.status(400).json({
-            message: 'Missing coordinates. Required query params: sourceLat, sourceLng, destinationLat, destinationLng'
-        });
-    }
-
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sourceLng},${sourceLat};${destinationLng},${destinationLat}?overview=full&geometries=geojson`;
-
-    if (typeof fetch !== 'function') {
-        return res.status(501).json({
-            message: 'Global fetch is not available on this Node.js runtime',
-            osrmUrl
-        });
-    }
-
-    try {
-        const response = await fetch(osrmUrl);
-
-        if (!response.ok) {
-            return res.status(response.status).json({
-                message: 'Failed to fetch route from OSRM',
-                osrmUrl
-            });
-        }
-
-        const payload = await response.json();
-
-        if (!payload.routes || !payload.routes.length) {
-            return res.status(404).json({
-                message: 'No route found for provided coordinates',
-                osrmUrl,
-                payload
-            });
-        }
-
-        return res.json({
-            source: { lat: Number(sourceLat), lng: Number(sourceLng) },
-            destination: { lat: Number(destinationLat), lng: Number(destinationLng) },
-            distanceMeters: payload.routes[0].distance,
-            durationSeconds: payload.routes[0].duration,
-            geojson: payload.routes[0].geometry
-        });
-    } catch (error) {
-        return res.status(500).json({
-            message: 'Unexpected error while fetching route geometry',
-            error: error.message,
-            osrmUrl
-        });
-    }
 });
 
 module.exports = router;
