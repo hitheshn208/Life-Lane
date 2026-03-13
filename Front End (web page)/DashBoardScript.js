@@ -94,18 +94,21 @@ signals:[
 
 ]
 
-const API_BASE_URL = "http://localhost:3000"
-
 const container = document.getElementById("ambulanceContainer")
-const statusFilter = document.getElementById("statusFilter")
+const pills = document.querySelectorAll(".filter-pill")
 
-function renderAmbulances(filter="all"){
+let activeFilters = []
+
+
+function renderAmbulances(){
 
 container.innerHTML = ""
 
-ambulances
-.filter(a => filter==="all" || a.status===filter)
-.forEach(a=>{
+const filtered = activeFilters.length === 0
+? ambulances
+: ambulances.filter(a => activeFilters.includes(a.status))
+
+filtered.forEach(a=>{
 
 const signalsHTML = a.signals.map(signal =>
 
@@ -168,50 +171,54 @@ ${signalsHTML}
 
 `
 
-card.onclick = async () => {
-
-try {
-
-const coordinatesResponse = await fetch(`${API_BASE_URL}/api/ambulances/${encodeURIComponent(a.plate)}/coordinates`)
-
-if(!coordinatesResponse.ok){
-throw new Error("Failed to get source/destination coordinates")
-}
-
-const coordinatesData = await coordinatesResponse.json()
-
-const selectedAmbulanceData = {
-...a,
-driver: coordinatesData.driver || "—",
-priority: coordinatesData.priority || "—",
-source: coordinatesData.source,
-destination: coordinatesData.destination,
-destinationHospital: a.destination
-}
-
-sessionStorage.setItem("selectedAmbulanceData", JSON.stringify(selectedAmbulanceData))
-window.location.href = "WebPage2.html"
-
-} catch(error){
-alert(error.message)
-}
-
-}
-
 container.appendChild(card)
 
 })
 
 }
 
-/* INITIAL LOAD */
+renderAmbulances()
+
+
+/* FILTER BUTTON LOGIC */
+
+pills.forEach(pill => {
+
+pill.addEventListener("click", () => {
+
+const status = pill.dataset.status
+
+if(status === "all"){
+
+activeFilters = []
+
+pills.forEach(p => p.classList.remove("active"))
+pill.classList.add("active")
+
+}else{
+
+document.querySelector('[data-status="all"]').classList.remove("active")
+
+if(activeFilters.includes(status)){
+
+activeFilters = activeFilters.filter(f => f !== status)
+pill.classList.remove("active")
+
+}else{
+
+activeFilters.push(status)
+pill.classList.add("active")
+
+}
+
+if(activeFilters.length === 0){
+document.querySelector('[data-status="all"]').classList.add("active")
+}
+
+}
 
 renderAmbulances()
 
-/* FILTER EVENT */
-
-statusFilter.addEventListener("change",()=>{
-
-renderAmbulances(statusFilter.value)
+})
 
 })

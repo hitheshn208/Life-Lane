@@ -15,22 +15,18 @@
 <body>
 
 <header>
-
 <h1>🚑 AMBULANCE CONTROL PANEL</h1>
-
 </header>
+
 <div class="filters">
 
-<label>Filter Status:</label>
+<div class="filter-pill active" data-status="all">All</div>
 
-<select id="statusFilter">
+<div class="filter-pill" data-status="critical">Critical</div>
 
-<option value="all">All</option>
-<option value="critical">Critical</option>
-<option value="moderate">Moderate</option>
-<option value="stable">Stable</option>
+<div class="filter-pill" data-status="moderate">Moderate</div>
 
-</select>
+<div class="filter-pill" data-status="stable">Stable</div>
 
 </div>
 
