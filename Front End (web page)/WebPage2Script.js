@@ -1,58 +1,49 @@
-function getAmbulanceData(){
+let map
+let ambulanceMarker
+let hospitalMarker
 
-const params = new URLSearchParams(window.location.search)
+/* ambulance icon */
 
-const data = params.get("data")
+const ambulanceIcon = L.icon({
 
-return JSON.parse(decodeURIComponent(data))
+iconUrl:"https://cdn-icons-png.flaticon.com/512/2967/2967350.png",
+
+iconSize:[40,40],
+iconAnchor:[20,20]
+
+})
+
+/* initialize map */
+
+function initMap(){
+
+const start = [12.9716,77.5946]   // temporary
+
+map = L.map("map").setView(start,13)
+
+L.tileLayer(
+"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+{
+maxZoom:19
+}
+).addTo(map)
+
+/* ambulance marker */
+
+ambulanceMarker = L.marker(start,{
+icon:ambulanceIcon
+}).addTo(map)
+
+/* hospital marker */
+
+const hospital = [12.9616,77.5846]
+
+hospitalMarker = L.marker(hospital).addTo(map)
+
+hospitalMarker.bindPopup("🏥 Hospital")
 
 }
 
-const ambulance = getAmbulanceData()
+/* run map */
 
-/* fill ambulance details */
-
-document.getElementById("ambulanceDetails").innerHTML = `
-
-<div class="detail">
-Plate Number:
-<span class="value">${ambulance.plate}</span>
-</div>
-
-<div class="detail">
-Destination Hospital:
-<span class="value">${ambulance.destination}</span>
-</div>
-
-<div class="detail">
-Patient Condition:
-<span class="value">${ambulance.status.toUpperCase()}</span>
-</div>
-
-<div class="detail">
-Estimated Arrival:
-<span class="value">${ambulance.eta}</span>
-</div>
-
-<div class="detail">
-Route Signals:
-<span class="value">${ambulance.signals.length}</span>
-</div>
-
-<div class="detail">
-Dispatch Time:
-<span class="value">2 mins ago</span>
-</div>
-
-<div class="detail">
-Ambulance Speed:
-<span class="value">48 km/h</span>
-</div>
-
-`
-
-/* system details */
-
-document.getElementById("signalCount").innerText = ambulance.signals.length
-
-document.getElementById("priorityLevel").innerText = ambulance.status.toUpperCase()
+initMap()

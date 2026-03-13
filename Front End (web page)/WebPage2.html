@@ -4,11 +4,14 @@
 <head>
 
 <meta charset="UTF-8">
-<title>Ambulance Tracking Dashboard</title>
+<title>Ambulance Route Dashboard</title>
 
-<link rel="stylesheet" href="WebPage2Style.css">
+<link rel="stylesheet" href="map.css">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 </head>
 
@@ -16,70 +19,54 @@
 
 <div class="container">
 
-<!-- LEFT CONTROL PANEL -->
-
 <div class="sidebar">
 
-<h2>🚑 Ambulance Control</h2>
+<h2>🚑 Ambulance Information</h2>
 
 <div class="ambulance-card">
 
 <img src="https://cdn-icons-png.flaticon.com/512/2967/2967350.png" class="ambulance-img">
 
-<div id="ambulanceDetails"></div>
-
+<div class="info-row">
+Plate Number: <span id="plate">—</span>
 </div>
 
-<div class="system-info">
-
-<h3>🚦 Corridor Control</h3>
-
-<div class="info-line">
-Signals Ahead: <span id="signalCount"></span>
+<div class="info-row">
+Driver Name: <span id="driver">—</span>
 </div>
 
-<div class="info-line">
-Green Corridor: <span class="active">ACTIVE</span>
+<div class="info-row">
+Patient Condition: <span id="status">—</span>
 </div>
 
-<div class="info-line">
-Traffic Clearance: <span>IN PROGRESS</span>
+<div class="info-row">
+Destination Hospital: <span id="hospital">—</span>
 </div>
 
-<div class="info-line">
-Emergency Priority: <span id="priorityLevel"></span>
+<div class="info-row">
+Estimated Arrival: <span id="eta">—</span>
 </div>
 
+<div class="info-row">
+Signals Ahead: <span id="signals">—</span>
 </div>
 
-</div>
-
-
-<!-- MAP AREA -->
-
-<div class="map-section">
-
-<div class="map-header">
-
-🚑 Route Monitoring
-
-</div>
-
-<div id="mapPlaceholder">
-
-<div class="map-center">
-
-🗺 Map API will load here
-
+<div class="info-row">
+Priority Level: <span id="priority">—</span>
 </div>
 
 </div>
 
 </div>
 
+<div id="map"></div>
+
 </div>
 
-<script src="WebPage2Script.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="map.js"></script>
 
 </body>
+
 </html>

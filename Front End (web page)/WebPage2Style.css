@@ -1,136 +1,51 @@
 body{
-
 margin:0;
 font-family:'Inter',sans-serif;
 background:#0f1115;
 color:white;
-
 }
 
 .container{
-
 display:flex;
 height:100vh;
-
 }
 
-/* SIDEBAR */
+/* sidebar */
 
 .sidebar{
-
-width:340px;
+width:320px;
 background:#161a22;
-
 padding:20px;
-
 border-right:1px solid rgba(255,255,255,0.05);
-
 }
 
-/* ambulance card */
-
 .ambulance-card{
-
 background:#1f2430;
-
-padding:18px;
-
+padding:15px;
 border-radius:12px;
-
-margin-bottom:20px;
-
-text-align:center;
-
+text-align:left;
 }
 
 .ambulance-img{
-
-width:80px;
+width:70px;
+display:block;
+margin:auto;
 margin-bottom:10px;
-
 }
 
-/* info text */
-
-.detail{
-
-margin:6px 0;
-color:#aaa;
+.info-row{
+margin:8px 0;
 font-size:14px;
-
+color:#bbb;
 }
 
-.value{
-
+.info-row span{
 color:white;
 font-weight:600;
-
 }
 
-/* system info */
+/* map */
 
-.system-info{
-
-background:#1f2430;
-
-padding:15px;
-
-border-radius:12px;
-
-}
-
-.system-info h3{
-
-margin-top:0;
-
-}
-
-.info-line{
-
-margin:10px 0;
-font-size:14px;
-
-}
-
-.active{
-
-color:#1dd75b;
-font-weight:600;
-
-}
-
-/* MAP SECTION */
-
-.map-section{
-
+#map{
 flex:1;
-display:flex;
-flex-direction:column;
-
-}
-
-.map-header{
-
-padding:15px 20px;
-background:#1a1f2b;
-border-bottom:1px solid rgba(255,255,255,0.05);
-
-}
-
-#mapPlaceholder{
-
-flex:1;
-background:#0c0f14;
-
-display:flex;
-align-items:center;
-justify-content:center;
-
-}
-
-.map-center{
-
-color:#666;
-font-size:20px;
-
 }
