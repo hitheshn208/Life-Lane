@@ -245,7 +245,7 @@ data class AuthResult(val isSuccess: Boolean, val message: String, val driverId:
 
 private fun loginUser(phone: String, pass: String): AuthResult {
     return try {
-        val url = URL("http://10.202.141.236:3000/auth/login")
+        val url = URL("http://10.229.137.197:3000/auth/login")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.doOutput = true
@@ -287,7 +287,7 @@ private fun loginUser(phone: String, pass: String): AuthResult {
 
 private fun registerUser(name: String, phone: String, license: String, pass: String): AuthResult {
     return try {
-        val url = URL("http://10.202.141.236:3000/auth/register")
+        val url = URL("http://10.229.137.197:3000/auth/register")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.doOutput = true
