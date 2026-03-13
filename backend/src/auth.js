@@ -4,7 +4,7 @@ const { databasePath, getQuery, runQuery } = require('./database');
 
 router.post('/register', async (req, res) => {
     const { name, phone, license_number, password } = req.body;
-
+    console.log("Request Came to register");
     if (!name || !phone || !license_number) {
         return res.status(400).json({
             message: 'name, phone, and license_number are required'
@@ -32,15 +32,14 @@ router.post('/register', async (req, res) => {
         }
 
         return res.status(500).json({
-            message: 'Failed to register driver',
-            error: error.message
+            message: 'Internal Server error, Please Try again Later'
         });
     }
 });
 
 router.post('/login', async (req, res) => {
     const { phone, password } = req.body;
-
+    console.log("Request Came to login");
     if (!phone || !password) {
         return res.status(400).json({
             message: 'phone and password are required'
