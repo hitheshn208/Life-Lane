@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Looper
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -73,8 +74,9 @@ import java.util.Locale
 
 @SuppressLint("MissingPermission")
 @Composable
-fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: () -> Unit = {}) {
+fun DashboardScreen(vehicleId: String = "", authToken: String = "", onBackToSetup: () -> Unit = {}) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val sharedPref = remember { context.getSharedPreferences("testapp_prefs", Context.MODE_PRIVATE) }
     
     LaunchedEffect(Unit) {
@@ -141,9 +143,9 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
 
     // Faster Routing Logic
     LaunchedEffect(ambulanceLocation, patientLocation, hospitalLocation) {
-        val pLoc = patientLocation
+        val pLoc = patientLocation ?: ambulanceLocation // Default source is current location if no patient selected
         val hLoc = hospitalLocation
-        if (pLoc != null && hLoc != null) {
+        if (hLoc != null) {
             val distanceMoved = lastCalcLocation?.distanceToAsDouble(ambulanceLocation) ?: Double.MAX_VALUE
             if (distanceMoved > 50 || lastCalcLocation == null) {
                 withContext(Dispatchers.IO) {
@@ -313,7 +315,7 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
 
         if (!isMapSelectionMode) {
             // Header Section
-            SmallFloatingTopBar(onLogout = onLogout)
+            SmallFloatingTopBar(onBack = onBackToSetup)
 
             // Zoom Buttons & MyLocation (Floating)
             Column(
@@ -415,60 +417,33 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: ()
             PatientDetailsDialog(
                 onDismiss = { showPatientDialog = false },
                 onSubmit = { details ->
-                    showPatientDialog = false
-                    isTripStarted = true
-                    
-                    val pLoc = patientLocation
+                    val pLoc = patientLocation ?: ambulanceLocation
                     val hLoc = hospitalLocation
-                    if (pLoc != null && hLoc != null) {
-                        sendTripDataToServer(
-                            vehicleId = vehicleId,
-                            authToken = authToken,
-                            patientLoc = pLoc,
-                            hospitalLoc = hLoc,
-                            details = details
-                        )
+                    if (hLoc != null) {
+                        val etaMinutes = eta.split(" ")[0].toIntOrNull() ?: 0
+                        val severityValue = details["severity"]?.uppercase() ?: "STABLE"
+                        
+                        scope.launch {
+                            val result = ApiService.startTrip(
+                                token = authToken,
+                                vehicleNumber = vehicleId,
+                                patientLoc = pLoc,
+                                hospitalLoc = hLoc,
+                                severity = severityValue,
+                                etaMinutes = etaMinutes
+                            )
+                            
+                            if (result.isSuccess) {
+                                showPatientDialog = false
+                                isTripStarted = true
+                                Toast.makeText(context, "Trip started successfully!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                            }
+                        }
                     }
                 }
             )
-        }
-    }
-}
-
-// Function to send data to your server
-fun sendTripDataToServer(
-    vehicleId: String,
-    authToken: String,
-    patientLoc: GeoPoint,
-    hospitalLoc: GeoPoint,
-    details: Map<String, String>
-) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val serverUrl = "${Config.BASE_URL}/api/trips/start"
-            val url = URL(serverUrl)
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json")
-            if (authToken.isNotEmpty()) {
-                conn.setRequestProperty("Authorization", "Bearer $authToken")
-            }
-
-            val json = JSONObject()
-            json.put("vehicle_number", vehicleId)
-            json.put("patient_lat", patientLoc.latitude)
-            json.put("patient_lon", patientLoc.longitude)
-            json.put("hospital_lat", hospitalLoc.latitude)
-            json.put("hospital_lon", hospitalLoc.longitude)
-            json.put("patient_age", details["age"])
-            json.put("condition", details["condition"])
-            json.put("severity", details["severity"])
-
-            conn.outputStream.use { it.write(json.toString().toByteArray()) }
-            conn.responseCode
-        } catch (_: Exception) {
-            // Ignore error
         }
     }
 }
@@ -856,7 +831,7 @@ fun ControlPanel(
                     )
                 }
                 
-                if (patientLocation != null && hospitalLocation != null) {
+                if (hospitalLocation != null) {
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = onStartTrip,
@@ -1006,9 +981,9 @@ fun LocationSelector(
 fun PatientDetailsDialog(onDismiss: () -> Unit, onSubmit: (Map<String, String>) -> Unit) {
     var age by remember { mutableStateOf("") }
     var selectedCondition by remember { mutableStateOf("Heart Attack") }
-    var selectedSeverity by remember { mutableStateOf("Critical") }
+    var selectedSeverity by remember { mutableStateOf("STABLE") }
     val conditions = listOf("Heart Attack", "Heavy Blood Loss", "Fracture", "Stroke", "Accident Trauma", "Breathing Difficulty", "Other Emergency")
-    val severities = listOf("Low", "Medium", "Critical")
+    val severities = listOf("STABLE", "MODERATE", "CRITICAL")
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1096,7 +1071,7 @@ fun PatientDetailsDialog(onDismiss: () -> Unit, onSubmit: (Map<String, String>) 
 }
 
 @Composable
-fun SmallFloatingTopBar(onLogout: () -> Unit) {
+fun SmallFloatingTopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1125,13 +1100,13 @@ fun SmallFloatingTopBar(onLogout: () -> Unit) {
         }
         
         ExtendedFloatingActionButton(
-            onClick = onLogout,
+            onClick = onBack,
             containerColor = Color.White,
             contentColor = Color.Black,
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.size(width = 120.dp, height = 44.dp),
-            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp)) },
-            text = { Text("Logout", fontSize = 14.sp) }
+            modifier = Modifier.size(width = 110.dp, height = 44.dp),
+            icon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            text = { Text("Back", fontSize = 14.sp) }
         )
     }
 }
