@@ -21,6 +21,7 @@ function verifyAuthToken(req, res, next) {
 
     if (scheme !== 'Bearer' || !token) {
         return res.status(401).json({
+            isValid: false,
             message: 'Authorization token is required. Use: Bearer <token>'
         });
     }
@@ -31,6 +32,7 @@ function verifyAuthToken(req, res, next) {
         return next();
     } catch (_error) {
         return res.status(401).json({
+            isValid: false,
             message: 'Invalid or expired token'
         });
     }
