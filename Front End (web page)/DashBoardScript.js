@@ -97,8 +97,15 @@ signals:[
 const API_BASE_URL = "http://localhost:3000"
 
 const container = document.getElementById("ambulanceContainer")
+const statusFilter = document.getElementById("statusFilter")
 
-ambulances.forEach(a=>{
+function renderAmbulances(filter="all"){
+
+container.innerHTML = ""
+
+ambulances
+.filter(a => filter==="all" || a.status===filter)
+.forEach(a=>{
 
 const signalsHTML = a.signals.map(signal =>
 
@@ -192,5 +199,19 @@ alert(error.message)
 }
 
 container.appendChild(card)
+
+})
+
+}
+
+/* INITIAL LOAD */
+
+renderAmbulances()
+
+/* FILTER EVENT */
+
+statusFilter.addEventListener("change",()=>{
+
+renderAmbulances(statusFilter.value)
 
 })
