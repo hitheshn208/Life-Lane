@@ -1,235 +1,237 @@
-body{
-margin:0;
-font-family:'Inter',sans-serif;
-background:#0f1115;
-color:white;
-}
+    body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    background:#f8f6f2;   /* cream background */
+    color:#1f2937;        /* dark text */
+    }
 
-header{
-text-align:center;
-padding:25px;
-font-size:24px;
-font-weight:600;
-letter-spacing:1px;
-}
+    header{
+    text-align:center;
+    padding:25px;
+    font-size:24px;
+    font-weight:600;
+    letter-spacing:1px;
+    }
 
-/* FILTERS */
+    /* FILTERS */
 
-.filters{
-max-width:1400px;
-margin:auto;
-display:flex;
-gap:15px;
-padding:10px 20px;
-}
+    .filters{
+    max-width:1400px;
+    margin:auto;
+    display:flex;
+    gap:15px;
+    padding:10px 20px;
+    }
 
-.filter-pill{
+    .filter-pill{
 
-padding:10px 18px;
-border-radius:25px;
+    padding:10px 18px;
+    border-radius:25px;
 
-background:#1a1d24;
-border:1px solid rgba(255,255,255,0.08);
+    background:#ffffff;
+    border:1px solid #e5e7eb;
 
-cursor:pointer;
+    cursor:pointer;
 
-transition:0.25s;
-}
+    transition:0.25s;
+    }
 
-.filter-pill:hover{
-background:#242833;
-}
+    .filter-pill:hover{
+    background:#f3f4f6;
+    }
 
-.filter-pill.active{
-background:#3b82f6;
-}
+    .filter-pill.active{
+    background:#3b82f6;
+    color:white;
+    }
 
-/* DASHBOARD */
+    /* DASHBOARD */
 
-.ambulance-container{
-padding:20px;
-max-width:1400px;
-margin:auto;
-}
+    .ambulance-container{
+    padding:20px;
+    max-width:1400px;
+    margin:auto;
+    }
 
-/* CARD */
+    /* CARD */
 
-.ambulance-card{
+    .ambulance-card{
 
-display:flex;
-align-items:center;
-justify-content:space-between;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
 
-background:#1a1d24;
+    background:#ffffff;
 
-padding:22px;
-margin-bottom:20px;
+    padding:22px;
+    margin-bottom:20px;
 
-border-radius:14px;
+    border-radius:14px;
 
-border:1px solid rgba(255,255,255,0.05);
+    border:1px solid #e5e7eb;
 
-transition:0.3s;
-}
+    transition:0.3s;
+    }
 
-.ambulance-card:hover{
+    .ambulance-card:hover{
 
-transform:translateY(-4px);
-box-shadow:0 10px 30px rgba(0,0,0,0.5);
-}
+    transform:translateY(-4px);
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+    }
 
-/* INFO */
+    /* INFO */
 
-.ambulance-info{
+    .ambulance-info{
 
-display:flex;
-align-items:center;
-gap:15px;
-width:240px;
-}
+    display:flex;
+    align-items:center;
+    gap:15px;
+    width:240px;
+    }
 
-.ambulance-icon{
-font-size:40px;
-}
+    .ambulance-icon{
+    font-size:40px;
+    }
 
-.info-text h3{
-margin:0;
-font-size:16px;
-}
+    .info-text h3{
+    margin:0;
+    font-size:16px;
+    }
 
-.info-text p{
-margin:3px 0;
-font-size:13px;
-color:#aaa;
-}
+    .info-text p{
+    margin:3px 0;
+    font-size:13px;
+    color:#6b7280;
+    }
 
-/* STATUS COLORS */
+    /* STATUS COLORS */
 
-.status{
-padding:4px 8px;
-border-radius:6px;
-font-size:12px;
-font-weight:600;
-}
+    .status{
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:600;
+    color:white;
+    }
 
-.critical{
-background:#ff3b3b;
-}
+    .critical{
+    background:#ef4444;
+    }
 
-.moderate{
-background:#ff9d00;
-}
+    .moderate{
+    background:#f59e0b;
+    }
 
-.stable{
-background:#1dd75b;
-}
+    .stable{
+    background:#22c55e;
+    }
 
-/* ROUTE */
+    /* ROUTE */
 
-.route{
+    .route{
 
-flex:1;
-display:flex;
-align-items:center;
-position:relative;
-margin:0 30px;
-}
+    flex:1;
+    display:flex;
+    align-items:center;
+    position:relative;
+    margin:0 30px;
+    }
 
-/* full grey route */
+    /* full grey route */
 
-.progress-line{
+    .progress-line{
 
-position:absolute;
-height:5px;
-background:#2b2f38;
-width:100%;
-border-radius:3px;
-}
+    position:absolute;
+    height:5px;
+    background:#e5e7eb;
+    width:100%;
+    border-radius:3px;
+    }
 
-/* ambulance progress */
+    /* ambulance progress */
 
-.progress{
+    .progress{
 
-position:absolute;
-height:5px;
-background:#3b82f6;
-border-radius:3px;
-transition:0.5s ease;
-}
+    position:absolute;
+    height:5px;
+    background:#3b82f6;
+    border-radius:3px;
+    transition:0.5s ease;
+    }
 
-/* signals container */
+    /* signals container */
 
-.signals{
+    .signals{
 
-display:flex;
-justify-content:space-between;
-align-items:center;
-width:100%;
-position:relative;
-z-index:2;
-}
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width:100%;
+    position:relative;
+    z-index:2;
+    }
 
-/* signal block */
+    /* signal block */
 
-.signal-block{
+    .signal-block{
 
-display:flex;
-flex-direction:column;
-align-items:center;
-}
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    }
 
-.signal{
+    .signal{
 
-font-size:20px;
-}
+    font-size:20px;
+    }
 
-.signal-eta{
+    .signal-eta{
 
-font-size:11px;
-margin-bottom:4px;
-color:#aaa;
-}
+    font-size:11px;
+    margin-bottom:4px;
+    color:#6b7280;
+    }
 
-/* hospital */
+    /* hospital */
 
-.hospital{
+    .hospital{
 
-font-size:28px;
-margin-left:10px;
-}
+    font-size:28px;
+    margin-left:10px;
+    }
 
-/* ETA badge */
+    /* ETA badge */
 
-.eta{
-background:black;
-color:#00ff9d;
-padding:7px 12px;
-border-radius:6px;
-font-size:13px;
-font-weight:600;
-}
+    .eta{
+    background:#111827;
+    color:#10b981;
+    padding:7px 12px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:600;
+    }
 
-/* signal status light */
+    /* signal status light */
 
-.signal-light{
+    .signal-light{
 
-width:10px;
-height:10px;
-border-radius:50%;
-margin-top:4px;
-}
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    margin-top:4px;
+    }
 
-.red{
-background:#ff3b3b;
-box-shadow:0 0 8px #ff3b3b;
-}
+    .red{
+    background:#ef4444;
+    box-shadow:0 0 6px #ef4444;
+    }
 
-.yellow{
-background:#ffc400;
-box-shadow:0 0 8px #ffc400;
-}
+    .yellow{
+    background:#facc15;
+    box-shadow:0 0 6px #facc15;
+    }
 
-.green{
-background:#1dd75b;
-box-shadow:0 0 8px #1dd75b;
-}
+    .green{
+    background:#22c55e;
+    box-shadow:0 0   6px #22c55e;
+    }
