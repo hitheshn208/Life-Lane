@@ -28,7 +28,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 @Composable
-fun LoginScreen(onLoginSuccess: (String, String, String) -> Unit = { _, _, _ -> }) {
+fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, _, _, _ -> }) {
     var isLoginMode by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
     var dlNumber by remember { mutableStateOf("") }
@@ -198,7 +198,7 @@ fun LoginScreen(onLoginSuccess: (String, String, String) -> Unit = { _, _, _ -> 
                                 withContext(Dispatchers.Main) {
                                     isLoading = false
                                     if (result.isSuccess) {
-                                        onLoginSuccess(result.name ?: name, phoneNumber, result.driverId!!)
+                                        onLoginSuccess(result.name ?: name, phoneNumber, result.driverId!!, result.token!!)
                                     } else {
                                         errorMessage = result.message
                                     }
@@ -241,11 +241,11 @@ fun LoginScreen(onLoginSuccess: (String, String, String) -> Unit = { _, _, _ -> 
     }
 }
 
-data class AuthResult(val isSuccess: Boolean, val message: String, val driverId: String? = null, val name: String? = null)
-
+data class AuthResult(val isSuccess: Boolean, val message: String, val driverId: String? = null, val name: String? = null, val token: String? = null)
+var baseURL = "http://10.202.141.236:3000"
 private fun loginUser(phone: String, pass: String): AuthResult {
     return try {
-        val url = URL("http://10.229.137.197:3000/auth/login")
+        val url = URL("${baseURL}/auth/login")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.doOutput = true
@@ -269,10 +269,18 @@ private fun loginUser(phone: String, pass: String): AuthResult {
             200 -> {
                 val resJson = JSONObject(response)
                 val driver = resJson.getJSONObject("driver")
-                AuthResult(true, "Login successful", driver.getString("id"), driver.getString("name"))
+                AuthResult(true, "Login successful", driver.getString("id"), driver.getString("name"), resJson.getString("token"))
             }
-            400 -> AuthResult(false, "phone and password are required")
-            401 -> AuthResult(false, "Invalid phone or password")
+            400 -> {
+                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
+                val msg = resJson?.optString("message") ?: "phone and password are required"
+                AuthResult(false, msg)
+            }
+            401 -> {
+                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
+                val msg = resJson?.optString("message") ?: "Invalid phone or password"
+                AuthResult(false, msg)
+            }
             500 -> {
                 val resJson = try { JSONObject(response) } catch(e: Exception) { null }
                 val msg = resJson?.optString("message") ?: "Failed to login"
@@ -287,7 +295,7 @@ private fun loginUser(phone: String, pass: String): AuthResult {
 
 private fun registerUser(name: String, phone: String, license: String, pass: String): AuthResult {
     return try {
-        val url = URL("http://10.229.137.197:3000/auth/register")
+        val url = URL("${baseURL}/auth/register")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.doOutput = true
@@ -312,10 +320,23 @@ private fun registerUser(name: String, phone: String, license: String, pass: Str
         when (code) {
             201 -> {
                 val resJson = JSONObject(response)
-                AuthResult(true, "Success", resJson.getString("driverId"))
+                AuthResult(true, resJson.optString("message", "Success"), resJson.getString("driverId"), name, resJson.getString("token"))
             }
-            409 -> AuthResult(false, "Phone or license number already exists")
-            500 -> AuthResult(false, "Internal Server error, Please Try again Later")
+            400 -> {
+                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
+                val msg = resJson?.optString("message") ?: "name, phone, license_number and password are required"
+                AuthResult(false, msg)
+            }
+            409 -> {
+                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
+                val msg = resJson?.optString("message") ?: "Phone or license number already exists"
+                AuthResult(false, msg)
+            }
+            500 -> {
+                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
+                val msg = resJson?.optString("message") ?: "Internal Server error, Please Try again Later"
+                AuthResult(false, msg)
+            }
             else -> AuthResult(false, "Unknown error occurred: $code")
         }
     } catch (e: Exception) {
