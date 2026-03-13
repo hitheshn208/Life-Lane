@@ -32,13 +32,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import com.example.testapp.ui.theme.TestAppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val sharedPref = getSharedPreferences("testapp_prefs", Context.MODE_PRIVATE)
-        val isLoggedInInitial = sharedPref.getBoolean("isLoggedIn", false)
         val savedName = sharedPref.getString("userName", "") ?: ""
         val savedVehicleId = sharedPref.getString("vehicleId", "") ?: ""
         val savedDriverId = sharedPref.getString("driverId", "") ?: ""
@@ -47,21 +51,36 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TestAppTheme {
-                var currentScreen by remember { 
-                    mutableStateOf(
-                        when {
-                            !isLoggedInInitial -> "login"
-                            savedVehicleId.isEmpty() -> "vehicle_setup"
-                            else -> "dashboard"
-                        }
-                    ) 
-                }
+                var currentScreen by remember { mutableStateOf("loading") }
                 var userName by remember { mutableStateOf(savedName) }
                 var vehicleId by remember { mutableStateOf(savedVehicleId) }
                 var driverId by remember { mutableStateOf(savedDriverId) }
                 var authToken by remember { mutableStateOf(savedToken) }
 
+                LaunchedEffect(Unit) {
+                    if (authToken.isEmpty()) {
+                        currentScreen = "login"
+                    } else {
+                        val result = verifyTokenFromServer(authToken)
+                        if (result.isSuccess) {
+                            userName = result.name ?: userName
+                            driverId = result.driverId ?: driverId
+                            currentScreen = if (vehicleId.isEmpty()) "vehicle_setup" else "dashboard"
+                        } else {
+                            // Token invalid, clear and go to login
+                            sharedPref.edit { clear() }
+                            authToken = ""
+                            currentScreen = "login"
+                        }
+                    }
+                }
+
                 when (currentScreen) {
+                    "loading" -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
                     "login" -> {
                         LoginScreen(onLoginSuccess = { name, phone, id, token ->
                             sharedPref.edit {
@@ -109,6 +128,43 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun verifyTokenFromServer(token: String): AuthResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                // baseURL is defined in LoginScreen.kt as package-private
+                val url = URL("${baseURL}/auth/verify-token")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("Authorization", "Bearer $token")
+                
+                val code = conn.responseCode
+                val response = if (code in 200..299) {
+                    conn.inputStream.bufferedReader().use { it.readText() }
+                } else {
+                    conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                }
+
+                val resJson = JSONObject(response)
+                val isValid = resJson.optBoolean("isValid", false)
+                
+                if (code == 200 && isValid) {
+                    val user = resJson.getJSONObject("user")
+                    AuthResult(
+                        isSuccess = true, 
+                        message = "Token valid", 
+                        driverId = user.getString("driverId"), 
+                        name = user.getString("name"), 
+                        token = token
+                    )
+                } else {
+                    AuthResult(false, resJson.optString("message", "Session expired"))
+                }
+            } catch (e: Exception) {
+                AuthResult(false, "Network error: ${e.message}")
             }
         }
     }
