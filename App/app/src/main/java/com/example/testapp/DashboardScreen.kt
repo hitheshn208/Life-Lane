@@ -443,14 +443,27 @@ fun createMarkerIcon(context: Context, color: Int, label: String): Drawable {
 }
 
 fun createCurrentLocationIcon(context: Context): Drawable {
-    val size = 64
+    val size = 100
     val bitmap = createBitmap(size, size, Bitmap.Config.ARGB_8888)
     bitmap.applyCanvas {
         val paint = Paint().apply { isAntiAlias = true }
+        // White background circle
         paint.color = android.graphics.Color.WHITE
         drawCircle(size / 2f, size / 2f, size / 2f, paint)
-        paint.color = "#2196F3".toColorInt()
-        drawCircle(size / 2f, size / 2f, size / 2.5f, paint)
+        
+        // Red border
+        paint.color = "#FF0000".toColorInt()
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 4f
+        drawCircle(size / 2f, size / 2f, (size / 2f) - 2f, paint)
+
+        // Draw the ambulance emoji
+        paint.style = Paint.Style.FILL
+        paint.textSize = 60f
+        paint.textAlign = Paint.Align.CENTER
+        val xPos = size / 2f
+        val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2f)
+        drawText("🚑", xPos, yPos, paint)
     }
     return bitmap.toDrawable(context.resources)
 }
