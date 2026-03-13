@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,9 +24,6 @@ import com.example.testapp.ui.theme.TestAppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
 @Composable
 fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, _, _, _ -> }) {
@@ -40,6 +38,17 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.Black,
+        unfocusedTextColor = Color.Black,
+        focusedContainerColor = Color.White,
+        unfocusedContainerColor = Color.White,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = Color.LightGray,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = Color.Gray
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +56,7 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.surface
+                        Color.White
                     )
                 )
             )
@@ -59,17 +68,13 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Header Icon
             Surface(
                 modifier = Modifier.size(100.dp),
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.primary
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "🚑",
-                        fontSize = 48.sp
-                    )
+                    Text(text = "🚑", fontSize = 48.sp)
                 }
             }
 
@@ -81,7 +86,7 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 ),
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.Black
             )
 
             TabRow(
@@ -96,22 +101,20 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                 Tab(
                     selected = isLoginMode,
                     onClick = { isLoginMode = true; errorMessage = null },
-                    text = { Text("Login") }
+                    text = { Text("Login", color = if (isLoginMode) MaterialTheme.colorScheme.primary else Color.Gray) }
                 )
                 Tab(
                     selected = !isLoginMode,
                     onClick = { isLoginMode = false; errorMessage = null },
-                    text = { Text("Register") }
+                    text = { Text("Register", color = if (!isLoginMode) MaterialTheme.colorScheme.primary else Color.Gray) }
                 )
             }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -122,10 +125,12 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                             value = name,
                             onValueChange = { name = it },
                             label = { Text("Full Name") },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            singleLine = true
+                            singleLine = true,
+                            colors = textFieldColors,
+                            textStyle = TextStyle(color = Color.Black)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -134,10 +139,12 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                             value = dlNumber,
                             onValueChange = { dlNumber = it },
                             label = { Text("Driving License Number") },
-                            leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, tint = Color.Gray) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            singleLine = true
+                            singleLine = true,
+                            colors = textFieldColors,
+                            textStyle = TextStyle(color = Color.Black)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -147,11 +154,13 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                         value = phoneNumber,
                         onValueChange = { if (it.length <= 10) phoneNumber = it },
                         label = { Text("Phone Number") },
-                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Gray) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true
+                        singleLine = true,
+                        colors = textFieldColors,
+                        textStyle = TextStyle(color = Color.Black)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -160,25 +169,27 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Password") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray) },
                         trailingIcon = {
                             val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = null)
+                                Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true
+                        singleLine = true,
+                        colors = textFieldColors,
+                        textStyle = TextStyle(color = Color.Black)
                     )
 
                     errorMessage?.let {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = it,
-                            color = MaterialTheme.colorScheme.error,
+                            color = Color.Red,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -189,11 +200,11 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                         onClick = {
                             isLoading = true
                             errorMessage = null
-                            scope.launch(Dispatchers.IO) {
+                            scope.launch {
                                 val result = if (isLoginMode) {
-                                    loginUser(phoneNumber, password)
+                                    ApiService.login(phoneNumber, password)
                                 } else {
-                                    registerUser(name, phoneNumber, dlNumber, password)
+                                    ApiService.registerDriver(name, phoneNumber, dlNumber, password)
                                 }
                                 withContext(Dispatchers.Main) {
                                     isLoading = false
@@ -209,10 +220,7 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                             .fillMaxWidth()
                             .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        enabled = !isLoading && (isLoginMode || (name.isNotBlank() && dlNumber.isNotBlank())) && phoneNumber.length == 10 && password.length >= 4,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        enabled = !isLoading && (isLoginMode || (name.isNotBlank() && dlNumber.isNotBlank())) && phoneNumber.length == 10 && password.length >= 4
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -238,116 +246,5 @@ fun LoginScreen(onLoginSuccess: (String, String, String, String) -> Unit = { _, 
                 }
             }
         }
-    }
-}
-
-data class AuthResult(val isSuccess: Boolean, val message: String, val driverId: String? = null, val name: String? = null, val token: String? = null)
-var baseURL = "http://10.202.141.236:3000"
-private fun loginUser(phone: String, pass: String): AuthResult {
-    return try {
-        val url = URL("${baseURL}/auth/login")
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.doOutput = true
-        conn.setRequestProperty("Content-Type", "application/json")
-
-        val json = JSONObject().apply {
-            put("phone", phone)
-            put("password", pass)
-        }
-
-        conn.outputStream.use { it.write(json.toString().toByteArray()) }
-        
-        val code = conn.responseCode
-        val response = if (code in 200..299) {
-            conn.inputStream.bufferedReader().use { it.readText() }
-        } else {
-            conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-        }
-
-        when (code) {
-            200 -> {
-                val resJson = JSONObject(response)
-                val driver = resJson.getJSONObject("driver")
-                AuthResult(true, "Login successful", driver.getString("id"), driver.getString("name"), resJson.getString("token"))
-            }
-            400 -> {
-                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
-                val msg = resJson?.optString("message") ?: "phone and password are required"
-                AuthResult(false, msg)
-            }
-            401 -> {
-                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
-                val msg = resJson?.optString("message") ?: "Invalid phone or password"
-                AuthResult(false, msg)
-            }
-            500 -> {
-                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
-                val msg = resJson?.optString("message") ?: "Failed to login"
-                AuthResult(false, msg)
-            }
-            else -> AuthResult(false, "Unknown error occurred: $code")
-        }
-    } catch (e: Exception) {
-        AuthResult(false, "Could not connect to server: ${e.message}")
-    }
-}
-
-private fun registerUser(name: String, phone: String, license: String, pass: String): AuthResult {
-    return try {
-        val url = URL("${baseURL}/auth/register")
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.doOutput = true
-        conn.setRequestProperty("Content-Type", "application/json")
-
-        val json = JSONObject().apply {
-            put("name", name)
-            put("phone", phone)
-            put("license_number", license)
-            put("password", pass)
-        }
-
-        conn.outputStream.use { it.write(json.toString().toByteArray()) }
-        
-        val code = conn.responseCode
-        val response = if (code in 200..299) {
-            conn.inputStream.bufferedReader().use { it.readText() }
-        } else {
-            conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-        }
-
-        when (code) {
-            201 -> {
-                val resJson = JSONObject(response)
-                AuthResult(true, resJson.optString("message", "Success"), resJson.getString("driverId"), name, resJson.getString("token"))
-            }
-            400 -> {
-                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
-                val msg = resJson?.optString("message") ?: "name, phone, license_number and password are required"
-                AuthResult(false, msg)
-            }
-            409 -> {
-                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
-                val msg = resJson?.optString("message") ?: "Phone or license number already exists"
-                AuthResult(false, msg)
-            }
-            500 -> {
-                val resJson = try { JSONObject(response) } catch(e: Exception) { null }
-                val msg = resJson?.optString("message") ?: "Internal Server error, Please Try again Later"
-                AuthResult(false, msg)
-            }
-            else -> AuthResult(false, "Unknown error occurred: $code")
-        }
-    } catch (e: Exception) {
-        AuthResult(false, "Could not connect to server: ${e.message}")
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    TestAppTheme {
-        LoginScreen()
     }
 }
