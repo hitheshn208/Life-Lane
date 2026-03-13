@@ -74,7 +74,7 @@ import java.util.Locale
 
 @SuppressLint("MissingPermission")
 @Composable
-fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
+fun DashboardScreen(vehicleId: String = "", authToken: String = "", onLogout: () -> Unit = {}) {
     val context = LocalContext.current
     val sharedPref = remember { context.getSharedPreferences("testapp_prefs", Context.MODE_PRIVATE) }
     
@@ -358,6 +358,7 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
                     if (pLoc != null && hLoc != null) {
                         sendTripDataToServer(
                             vehicleId = vehicleId,
+                            authToken = authToken,
                             patientLoc = pLoc,
                             hospitalLoc = hLoc,
                             details = details
@@ -372,18 +373,22 @@ fun DashboardScreen(vehicleId: String = "", onLogout: () -> Unit = {}) {
 // Function to send data to your server
 fun sendTripDataToServer(
     vehicleId: String,
+    authToken: String,
     patientLoc: GeoPoint,
     hospitalLoc: GeoPoint,
     details: Map<String, String>
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val serverUrl = "https://your-backend-api.com/start-trip"
+            val serverUrl = "http://10.202.141.236:3000/start-trip" // Updated to use your baseURL
             val url = URL(serverUrl)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "application/json")
+            if (authToken.isNotEmpty()) {
+                conn.setRequestProperty("Authorization", "Bearer $authToken")
+            }
 
             val json = JSONObject()
             json.put("vehicle_id", vehicleId)
