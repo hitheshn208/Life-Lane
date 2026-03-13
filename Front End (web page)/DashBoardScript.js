@@ -132,7 +132,7 @@ container.appendChild(card)
 function connectActiveTripsSocket(){
 setConnectionStatus("Connecting...", "connecting")
 
-socket = new WebSocket(`${WS_BASE_URL}/ws/active-trips`)
+socket = new WebSocket(`${WS_BASE_URL}/ws/active-trips?role=dashboard`)
 
 socket.addEventListener("open", () => {
 setConnectionStatus("Live connected", "connected")
@@ -145,6 +145,34 @@ const payload = JSON.parse(event.data)
 if(payload.type === "active_trips_snapshot"){
 activeTrips = Array.isArray(payload.trips) ? payload.trips : []
 renderAmbulances()
+return
+}
+
+if(payload.type === "live_location_update"){
+const updateTripIndex = activeTrips.findIndex(trip => {
+if(payload.trip_id && Number(trip.id) === Number(payload.trip_id)){
+return true
+}
+
+if(payload.vehicle_number && String(trip.vehicle_number).toUpperCase() === String(payload.vehicle_number).toUpperCase()){
+return true
+}
+
+return false
+})
+
+if(updateTripIndex >= 0){
+const existing = activeTrips[updateTripIndex]
+activeTrips[updateTripIndex] = {
+...existing,
+live_lat: payload.lat,
+live_lon: payload.lon,
+eta_to_hospital: payload.eta_to_hospital ?? existing.eta_to_hospital,
+live_timestamp: payload.timestamp
+}
+renderAmbulances()
+}
+
 return
 }
 

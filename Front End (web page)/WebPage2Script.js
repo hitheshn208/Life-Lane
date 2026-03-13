@@ -1,9 +1,14 @@
 const API_BASE_URL = "http://localhost:3000"
+const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws")
 
 let map
 let patientMarker
 let hospitalMarker
+let ambulanceLiveMarker
 let patientToHospitalLayer
+let tripSocket
+let currentTripId = null
+let currentVehicleNumber = null
 
 function getSelectedAmbulanceData(){
 const raw = sessionStorage.getItem("selectedAmbulanceData")
@@ -73,6 +78,62 @@ const signalPath = document.getElementById("signalPath")
 if(signalPath){
 signalPath.innerHTML = ""
 }
+
+function updateEtaOnSidebar(etaToHospital){
+if(etaToHospital === null || etaToHospital === undefined){
+return
+}
+
+document.getElementById("eta").textContent = `${etaToHospital} min`
+document.getElementById("etaMinutes").textContent = String(etaToHospital)
+document.getElementById("remaining").textContent = `${etaToHospital} min remaining`
+}
+
+function upsertAmbulanceLiveMarker(lat, lon){
+if(!map){
+return
+}
+
+const safeLat = Number(lat)
+const safeLon = Number(lon)
+
+if(!Number.isFinite(safeLat) || !Number.isFinite(safeLon)){
+return
+}
+
+if(!ambulanceLiveMarker){
+ambulanceLiveMarker = L.marker([safeLat, safeLon]).addTo(map).bindPopup("🚑 Live Ambulance")
+return
+}
+
+ambulanceLiveMarker.setLatLng([safeLat, safeLon])
+}
+
+function connectTripLiveSocket(){
+tripSocket = new WebSocket(`${WS_BASE_URL}/ws/active-trips?role=webpage2`)
+
+tripSocket.addEventListener("message", (event) => {
+try{
+const payload = JSON.parse(event.data)
+
+if(payload.type !== "live_location_update"){
+return
+}
+
+const matchedByTripId = currentTripId && payload.trip_id && Number(currentTripId) === Number(payload.trip_id)
+const matchedByVehicle = currentVehicleNumber && payload.vehicle_number && String(currentVehicleNumber).toUpperCase() === String(payload.vehicle_number).toUpperCase()
+
+if(!matchedByTripId && !matchedByVehicle){
+return
+}
+
+upsertAmbulanceLiveMarker(payload.lat, payload.lon)
+updateEtaOnSidebar(payload.eta_to_hospital)
+}catch(error){
+console.error("Invalid websocket payload", error)
+}
+})
+}
 }
 
 async function initMap(trip){
@@ -132,7 +193,10 @@ return
 try{
 setLoader(true, "Fetching active trip details...")
 const trip = await fetchActiveTripDetails(selectedTripId)
+currentTripId = trip.id
+currentVehicleNumber = trip.vehicle_number
 await initMap(trip)
+connectTripLiveSocket()
 }catch(error){
 console.error(error)
 setLoader(true, "Unable to load selected active trip")
