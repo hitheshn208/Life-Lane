@@ -18,6 +18,10 @@ function generateAuthToken(driver) {
     );
 }
 
+function verifyTokenValue(token) {
+    return jwt.verify(token, JWT_SECRET);
+}
+
 function verifyAuthToken(req, res, next) {
     const authHeader = req.headers.authorization || '';
     const [scheme, token] = authHeader.split(' ');
@@ -30,7 +34,7 @@ function verifyAuthToken(req, res, next) {
     }
 
     try {
-        const payload = jwt.verify(token, JWT_SECRET);
+        const payload = verifyTokenValue(token);
         req.user = payload;
         return next();
     } catch (_error) {
@@ -43,5 +47,6 @@ function verifyAuthToken(req, res, next) {
 
 module.exports = {
     generateAuthToken,
-    verifyAuthToken
+    verifyAuthToken,
+    verifyTokenValue
 };

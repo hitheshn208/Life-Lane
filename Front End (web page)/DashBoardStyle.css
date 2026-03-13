@@ -6,11 +6,38 @@
     }
 
     header{
+    max-width:1400px;
+    margin:auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
     text-align:center;
     padding:25px;
     font-size:24px;
     font-weight:600;
     letter-spacing:1px;
+    }
+
+    .connection-status{
+    font-size:13px;
+    font-weight:600;
+    padding:8px 14px;
+    border-radius:999px;
+    }
+
+    .connection-status.connecting{
+    background:#fef3c7;
+    color:#92400e;
+    }
+
+    .connection-status.connected{
+    background:#dcfce7;
+    color:#166534;
+    }
+
+    .connection-status.error{
+    background:#fee2e2;
+    color:#991b1b;
     }
 
     /* FILTERS */
@@ -60,6 +87,7 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
+    gap:20px;
 
     background:#ffffff;
 
@@ -211,6 +239,43 @@
     font-weight:600;
     }
 
+    .trip-meta{
+    flex:1;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(180px,1fr));
+    gap:14px 24px;
+    }
+
+    .meta-block{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    }
+
+    .meta-label{
+    font-size:12px;
+    color:#6b7280;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    }
+
+    .meta-block strong{
+    font-size:14px;
+    color:#111827;
+    }
+
+    .empty-state{
+    max-width:1400px;
+    margin:30px auto;
+    padding:28px;
+    text-align:center;
+    background:#ffffff;
+    border:1px dashed #cbd5e1;
+    border-radius:16px;
+    color:#6b7280;
+    font-weight:600;
+    }
+
     /* signal status light */
 
     .signal-light{
@@ -234,4 +299,21 @@
     .green{
     background:#22c55e;
     box-shadow:0 0   6px #22c55e;
+    }
+
+    @media (max-width: 980px){
+    header{
+    flex-direction:column;
+    gap:12px;
+    }
+
+    .ambulance-card{
+    flex-direction:column;
+    align-items:flex-start;
+    }
+
+    .trip-meta{
+    width:100%;
+    grid-template-columns:1fr;
+    }
     }

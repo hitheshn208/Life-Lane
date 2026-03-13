@@ -74,6 +74,30 @@ db.serialize(() => {
     });
 
     db.run(`
+        CREATE TABLE IF NOT EXISTS active_trips (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            driver_id INTEGER NOT NULL,
+            vehicle_number TEXT NOT NULL,
+            patient_lat REAL NOT NULL,
+            patient_lon REAL NOT NULL,
+            hospital_lat REAL NOT NULL,
+            hospital_lon REAL NOT NULL,
+            severity TEXT NOT NULL CHECK (severity IN ('CRITICAL', 'MODERATE', 'STABLE')),
+            eta_to_hospital INTEGER NOT NULL,
+            start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+            FOREIGN KEY(vehicle_number) REFERENCES govt_ambulances(vehicle_number)
+        )
+    `, (error) => {
+        if (error) {
+            console.error('Failed to create active_trips table:', error.message);
+            return;
+        }
+
+        console.log('active_trips table is ready');
+    });
+
+    db.run(`
         INSERT OR IGNORE INTO govt_ambulances (vehicle_number, ambulance_name, ambulance_type, registered_hospital)
         VALUES
         ('KA19AB1023', 'LifeLine Rapid Response', 'ALS', 'City Hospital'),

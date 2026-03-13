@@ -1,9 +1,14 @@
 const express = require('express');
-const app = express();
 const cors = require('cors');
+const http = require('http');
+
+const app = express();
+const server = http.createServer(app);
 
 const authRoutes = require('./auth');
 const ambulanceRoutes = require('./ambulanceRoutes');
+const activeTripsRoutes = require('./activeTripsRoutes');
+const { initializeActiveTripsSocket } = require('./activeTripsRealtime');
 
 app.use(express.json());
 
@@ -19,8 +24,11 @@ app.use(cors({
 
 app.use('/auth', authRoutes);
 app.use('/api/ambulances', ambulanceRoutes);
+app.use('/api/trips', activeTripsRoutes);
 
-app.listen(3000, '0.0.0.0', (err)=>{
+initializeActiveTripsSocket(server);
+
+server.listen(3000, '0.0.0.0', (err)=>{
     if(err)
         console.log("Error While starting the server");
     else
