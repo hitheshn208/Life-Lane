@@ -21,6 +21,7 @@ data class AuthResult(val isSuccess: Boolean, val message: String, val driverId:
 data class VerifyResult(val isValidAmbulance: Boolean, val message: String, val ambulance: Ambulance? = null)
 data class RegisterResult(val isSuccess: Boolean, val message: String, val registrationId: Int? = null, val ambulance: Ambulance? = null)
 data class MyAmbulancesResult(val isSuccess: Boolean, val ambulances: List<Ambulance> = emptyList(), val message: String? = null)
+data class TripResult(val isSuccess: Boolean, val message: String, val tripId: Int? = null)
 
 object ApiService {
     private const val TIMEOUT = 5000
@@ -244,9 +245,16 @@ object ApiService {
         }
     }
 
-    suspend fun startTrip(token: String, vehicleNumber: String, patientLoc: GeoPoint, hospitalLoc: GeoPoint, details: Map<String, String>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun startTrip(
+        token: String, 
+        vehicleNumber: String, 
+        patientLoc: GeoPoint, 
+        hospitalLoc: GeoPoint, 
+        severity: String, 
+        etaMinutes: Int
+    ): TripResult = withContext(Dispatchers.IO) {
         try {
-            val url = URL("${Config.BASE_URL}/api/trips/start")
+            val url = URL("${Config.BASE_URL}/api/trips/active")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
@@ -261,15 +269,27 @@ object ApiService {
                 put("patient_lon", patientLoc.longitude)
                 put("hospital_lat", hospitalLoc.latitude)
                 put("hospital_lon", hospitalLoc.longitude)
-                put("patient_age", details["age"])
-                put("condition", details["condition"])
-                put("severity", details["severity"])
+                put("severity", severity)
+                put("eta_to_hospital", etaMinutes)
             }
 
             conn.outputStream.use { it.write(json.toString().toByteArray()) }
-            conn.responseCode in 200..299
-        } catch (_: Exception) {
-            false
+            
+            val code = conn.responseCode
+            val response = if (code in 200..299) {
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+            }
+            
+            val resJson = JSONObject(response)
+            if (code == 201) {
+                TripResult(true, resJson.getString("message"), resJson.optJSONObject("trip")?.optInt("id"))
+            } else {
+                TripResult(false, resJson.optString("message", "Failed to start trip"))
+            }
+        } catch (e: Exception) {
+            TripResult(false, "Network error: ${e.message}")
         }
     }
 }

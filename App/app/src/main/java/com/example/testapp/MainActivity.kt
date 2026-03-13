@@ -82,6 +82,14 @@ class MainActivity : ComponentActivity() {
                         VehicleSetupScreen(
                             userName = userName,
                             authToken = authToken,
+                            onLogout = {
+                                sharedPref.edit { clear() }
+                                vehicleId = ""
+                                userName = ""
+                                driverId = ""
+                                authToken = ""
+                                currentScreen = "login"
+                            },
                             onVehicleConfirmed = { id ->
                                 sharedPref.edit {
                                     putString("vehicleId", id)
@@ -95,15 +103,8 @@ class MainActivity : ComponentActivity() {
                         DashboardScreen(
                             vehicleId = vehicleId,
                             authToken = authToken,
-                            onLogout = {
-                                sharedPref.edit {
-                                    clear()
-                                }
-                                vehicleId = ""
-                                userName = ""
-                                driverId = ""
-                                authToken = ""
-                                currentScreen = "login"
+                            onBackToSetup = {
+                                currentScreen = "vehicle_setup"
                             }
                         )
                     }
