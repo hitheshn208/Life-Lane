@@ -94,11 +94,12 @@ signals:[
 
 ]
 
+const API_BASE_URL = "http://localhost:3000"
+
 const container = document.getElementById("ambulanceContainer")
 const pills = document.querySelectorAll(".filter-pill")
 
 let activeFilters = []
-
 
 function renderAmbulances(){
 
@@ -171,14 +172,50 @@ ${signalsHTML}
 
 `
 
+/* CARD CLICK -> FETCH BACKEND DATA + OPEN PAGE */
+
+card.onclick = async () => {
+
+try {
+
+const coordinatesResponse = await fetch(`${API_BASE_URL}/api/ambulances/${encodeURIComponent(a.plate)}/coordinates`)
+
+if(!coordinatesResponse.ok){
+throw new Error("Failed to get source/destination coordinates")
+}
+
+const coordinatesData = await coordinatesResponse.json()
+
+const selectedAmbulanceData = {
+...a,
+driver: coordinatesData.driver || "—",
+priority: coordinatesData.priority || "—",
+source: coordinatesData.source,
+destination: coordinatesData.destination,
+destinationHospital: a.destination
+}
+
+sessionStorage.setItem("selectedAmbulanceData", JSON.stringify(selectedAmbulanceData))
+
+window.location.href = "WebPage2.html"
+
+} catch(error){
+
+alert(error.message)
+
+}
+
+}
+
 container.appendChild(card)
 
 })
 
 }
 
-renderAmbulances()
+/* INITIAL RENDER */
 
+renderAmbulances()
 
 /* FILTER BUTTON LOGIC */
 
