@@ -4,9 +4,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_in_production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 function generateAuthToken(driver) {
+    const resolvedDriverId = driver.driver_id || driver.driverId || driver.id;
+
     return jwt.sign(
         {
-            driverId: driver.id,
+            driverId: resolvedDriverId,
+            driver_id: resolvedDriverId,
             phone: driver.phone,
             name: driver.name
         },

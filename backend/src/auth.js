@@ -100,7 +100,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/verify-token', verifyAuthToken, (req, res) => {
-    console.log("Arrived for vrification")
+    console.log("Arrived for verification")
     return res.json({
         isValid: true,
         message: 'Token is valid',
