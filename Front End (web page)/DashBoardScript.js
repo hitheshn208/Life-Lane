@@ -108,6 +108,7 @@ card.innerHTML = `
 
 card.onclick = () => {
 const selectedAmbulanceData = {
+tripId: trip.id,
 plate: trip.vehicle_number,
 driver: `Driver ${trip.driver_id}`,
 status: severityClass,
