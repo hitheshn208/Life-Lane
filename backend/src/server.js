@@ -53,13 +53,19 @@ app.use('/api/trips', activeTripsRoutes);
 
 initializeActiveTripsSocket(server);
 
-server.listen(3000, '0.0.0.0', (err)=>{
-    if(err)
-        console.log("Error While starting the server");
-    else {
-        getAllActiveTrips()
-            .then((trips) => bootstrapTripSignalSimulations(trips))
-            .catch((error) => console.error('Failed to bootstrap trip signal simulations:', error.message));
-        console.log("Server running in http://localhost:3000");
-    }
-})
+// server.listen(3000, '0.0.0.0', (err)=>{
+//     if(err)
+//         console.log("Error While starting the server");
+//     else {
+//         getAllActiveTrips()
+//             .then((trips) => bootstrapTripSignalSimulations(trips))
+//             .catch((error) => console.error('Failed to bootstrap trip signal simulations:', error.message));
+//         console.log("Server running in http://localhost:3000");
+//     }
+// })
+
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
