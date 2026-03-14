@@ -37,15 +37,25 @@ const { bootstrapTripSignalSimulations } = require('./services/signalSimulationS
 
 app.use(express.json());
 
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+
 app.use(cors({
-    origin: '*',
+    origin: CORS_ORIGIN,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept']
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
 
-// app.get("/", (req, res)=>{
-//     res.send("Backend is running");
-// });
+app.get('/', (_req, res) => {
+    res.status(200).json({
+        ok: true,
+        service: 'Build-for-Bangalore backend',
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/health', (_req, res) => {
+    res.status(200).json({ ok: true });
+});
 
 app.use('/auth', authRoutes);
 app.use('/api/ambulances', ambulanceRoutes);
@@ -53,19 +63,22 @@ app.use('/api/trips', activeTripsRoutes);
 
 initializeActiveTripsSocket(server);
 
-// server.listen(3000, '0.0.0.0', (err)=>{
-//     if(err)
-//         console.log("Error While starting the server");
-//     else {
-//         getAllActiveTrips()
-//             .then((trips) => bootstrapTripSignalSimulations(trips))
-//             .catch((error) => console.error('Failed to bootstrap trip signal simulations:', error.message));
-//         console.log("Server running in http://localhost:3000");
-//     }
-// })
-
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+server.listen(PORT, '0.0.0.0', async () => {
+    try {
+        const trips = await getAllActiveTrips();
+        await bootstrapTripSignalSimulations(trips);
+    } catch (error) {
+        console.error('Failed to bootstrap trip signal simulations:', error.message);
+    }
+
+    console.log('Server running on port', PORT);
+});
+
+process.on('SIGTERM', () => {
+    server.close(() => process.exit(0));
+});
+
+process.on('SIGINT', () => {
+    server.close(() => process.exit(0));
 });
