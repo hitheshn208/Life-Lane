@@ -1,10 +1,6 @@
 <!-- LOGO PLACEHOLDER -->
 <!-- LOGO REVEAL VIDEO -->
 
-<p align="center">
-<img src="Logo-Reveal.gif" width="300">
-</p>
-
 ---
 
 <!-- GLITCH TITLE -->
@@ -27,17 +23,6 @@
 
 <!-- BADGES -->
 
-<p align="center">
-
-<img src="https://img.shields.io/badge/STATUS-ACTIVE-ff003c?style=for-the-badge&logo=linux&logoColor=white">
-
-<img src="https://img.shields.io/badge/MODE-SMART_TRAFFIC-00eaff?style=for-the-badge">
-
-<img src="https://img.shields.io/badge/PROTOCOL-EMERGENCY_ROUTE-ff003c?style=for-the-badge">
-
-<img src="https://img.shields.io/badge/SYSTEM-ONLINE-00ff9c?style=for-the-badge">
-
-</p>
 
 ---
 
@@ -281,6 +266,673 @@ Signals turn green sequentially forming a moving corridor.
 🚑 **FASTER RESPONSE**  
 🚦 **SMART TRAFFIC CONTROL**  
 🌍 **SMART CITY READY**
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+<!-- ================================================= -->
+<!-- SYSTEM ARCHITECTURE -->
+<!-- ================================================= -->
+
+<p align="center">
+
+<img src="https://readme-typing-svg.herokuapp.com?font=Share+Tech+Mono&size=26&duration=2500&pause=900&color=00eaff&center=true&vCenter=true&width=750&lines=SYSTEM+ARCHITECTURE+INITIALIZED;LOADING+TRAFFIC+CONTROL+NETWORK;AMBULANCE+NODE+CONNECTED"/>
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+
+# ⚙️ TRAFFIC CONTROL NETWORK
+
+```bash
+$ initializing-traffic-control-architecture
+> ambulance node detected
+> cloud backend connected
+> traffic signal network mapped
+> emergency corridor protocol ready
+```
+
+The **Smart Green Corridor System** operates through a distributed architecture that connects ambulances, cloud servers, and traffic signals in real time.
+
+Each component communicates continuously to ensure **signals turn green before the ambulance arrives.**
+
+---
+
+## 🌐 NETWORK FLOW
+
+```
+        🚑 AMBULANCE NODE
+               │
+               │  GPS DATA STREAM
+               ▼
+        ☁️ CLOUD SERVER
+               │
+               │ ETA PREDICTION
+               ▼
+      🧠 ROUTE OPTIMIZATION ENGINE
+               │
+               │ SIGNAL COMMAND
+               ▼
+        🚦 TRAFFIC SIGNAL GRID
+               │
+               ▼
+        GREEN CORRIDOR CREATED
+```
+
+---
+
+## 📡 DATA FLOW SEQUENCE
+
+<details>
+<summary>📡 Expand to inspect network data flow</summary>
+
+```bash
+$ start-data-stream
+```
+
+1️⃣ Ambulance sends **live GPS location**
+
+2️⃣ Cloud backend calculates **fastest route**
+
+3️⃣ ETA engine predicts **arrival at signals**
+
+4️⃣ Traffic control system prepares **signal override**
+
+5️⃣ Signals turn green before ambulance arrival
+
+</details>
+
+---
+
+## 🎥 SYSTEM DEMO
+
+*(Video will be added later)*
+
+<p align="center">
+
+VIDEO PLACEHOLDER
+
+</p>
+
+---
+
+<!-- ================================================= -->
+<!-- TECHNOLOGY STACK -->
+<!-- ================================================= -->
+
+<p align="center">
+
+<img src="https://readme-typing-svg.herokuapp.com?font=Share+Tech+Mono&size=26&duration=2500&pause=900&color=00eaff&center=true&vCenter=true&width=750&lines=SCANNING+PROJECT+TECHNOLOGY+STACK;INITIALIZING+DEVELOPMENT+ENVIRONMENT;SYSTEM+MODULES+DETECTED"/>
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+
+# 🧠 TECHNOLOGY STACK
+
+```bash
+$ scanning-system-modules
+> android client detected
+> web dashboard initialized
+> backend api service active
+> database storage ready
+```
+
+The **Smart Green Corridor System** uses a combination of mobile, web, backend, and database technologies to enable **real-time ambulance tracking and traffic signal coordination**.
+
+---
+
+# 📱 ANDROID APPLICATION
+
+<p align="center">
+
+<img src="https://skillicons.dev/icons?i=kotlin,androidstudio"/>
+
+</p>
+
+```bash
+$ module : ambulance-mobile-app
+> language : kotlin
+> platform : android
+> status : operational
+```
+
+The **Android mobile application** is used by ambulance drivers to:
+
+- enter emergency details  
+- select destination hospital  
+- transmit GPS location data  
+
+The app continuously sends **real-time location updates** to the backend server.
+
+---
+
+# 🌐 WEB DASHBOARD
+
+<p align="center">
+
+<img src="https://skillicons.dev/icons?i=html,css"/>
+
+</p>
+
+```bash
+$ module : traffic-control-dashboard
+> frontend : html + css
+> ui : responsive control panel
+```
+
+The **central web dashboard** allows traffic authorities to:
+
+- monitor ambulance movement  
+- visualize traffic signal status  
+- view active emergency routes  
+
+It provides a **simple and responsive interface for traffic management**.
+
+---
+
+# ⚙️ BACKEND API
+
+<p align="center">
+
+<img src="https://skillicons.dev/icons?i=nodejs"/>
+
+</p>
+
+```bash
+$ module : api-server
+> framework : express.js
+> function : communication gateway
+```
+
+The **Express.js backend server** handles communication between the mobile app, dashboard, and database.
+
+Key responsibilities include:
+
+- receiving GPS location updates  
+- calculating estimated arrival time  
+- sending traffic signal commands  
+
+---
+
+# 💾 DATABASE
+
+<p align="center">
+
+<img src="https://skillicons.dev/icons?i=sqlite"/>
+
+</p>
+
+```bash
+$ module : database-engine
+> storage : sqlite3
+> architecture : lightweight
+> status : active
+```
+
+**SQLite3** stores application data including:
+
+- ambulance session data  
+- route information  
+- traffic signal control logs  
+
+It provides a **lightweight and efficient storage solution** for the system.
+
+---
+
+# ⚡ SYSTEM CAPABILITIES
+
+| Capability | Technology Used |
+|------------|----------------|
+| Mobile Application | Kotlin |
+| Web Dashboard | HTML + CSS |
+| Backend API | Express.js |
+| Database Storage | SQLite3 |
+
+---
+
+<p align="center">
+
+🚑 **REAL-TIME AMBULANCE TRACKING**  
+🚦 **INTELLIGENT TRAFFIC SIGNAL CONTROL**  
+🌍 **SCALABLE SMART CITY INFRASTRUCTURE**
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+<!-- ================================================= -->
+<!-- SYSTEM IMPACT -->
+<!-- ================================================= -->
+
+<p align="center">
+
+<img src="https://readme-typing-svg.herokuapp.com?font=Share+Tech+Mono&size=26&duration=2500&pause=900&color=FF3131&center=true&vCenter=true&width=750&lines=RUNNING+SYSTEM+IMPACT+ANALYSIS;EVALUATING+EMERGENCY+RESPONSE+METRICS;CALCULATING+LIFE+SAVING+POTENTIAL"/>
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+
+# 📊 SYSTEM IMPACT
+
+```bash
+$ analysing-emergency-response-performance
+> traffic delay reduction : active
+> ambulance priority routing : enabled
+> traffic signal automation : operational
+```
+
+The **Smart Green Corridor System** directly improves emergency response efficiency by reducing delays caused by traffic congestion.
+
+---
+
+## 🚑 EMERGENCY RESPONSE BENEFITS
+
+| Impact Area | Improvement |
+|-------------|-------------|
+| Ambulance Travel Time | Reduced |
+| Signal Waiting Time | Eliminated |
+| Emergency Response Efficiency | Increased |
+| Traffic Coordination | Automated |
+
+---
+
+## ⚡ KEY ADVANTAGES
+
+```
+[ REAL-TIME AMBULANCE TRACKING ]
+[ AUTOMATED TRAFFIC SIGNAL CONTROL ]
+[ LOW COST IMPLEMENTATION ]
+[ SCALABLE CITY-WIDE DEPLOYMENT ]
+```
+
+---
+
+## ❤️ LIFE SAVING POTENTIAL
+
+<details>
+<summary>🚑 Expand to inspect medical impact</summary>
+
+Medical emergencies such as:
+
+- cardiac arrest  
+- accidents  
+- stroke cases  
+- trauma injuries  
+
+require **immediate medical attention**.
+
+By reducing traffic delays, the system helps ambulances reach hospitals **faster during the critical golden minutes**.
+
+</details>
+
+---
+
+<p align="center">
+
+🚑 **FASTER RESPONSE**  
+🚦 **SMARTER TRAFFIC MANAGEMENT**  
+❤️ **MORE LIVES SAVED**
+
+</p>
+
+---
+
+<!-- ================================================= -->
+<!-- FUTURE ROADMAP -->
+<!-- ================================================= -->
+
+<p align="center">
+
+<img src="https://readme-typing-svg.herokuapp.com?font=Share+Tech+Mono&size=26&duration=2500&pause=900&color=00eaff&center=true&vCenter=true&width=750&lines=INITIALIZING+FUTURE+DEVELOPMENT+ROADMAP;SCANNING+SMART+CITY+INTEGRATION+POTENTIAL;UPGRADING+SYSTEM+CAPABILITIES"/>
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+
+# 🚀 FUTURE SCOPE
+
+```bash
+$ loading-development-roadmap
+> expansion modules detected
+> smart city integration possible
+```
+
+The Smart Green Corridor system can evolve into a **complete intelligent emergency traffic infrastructure**.
+
+---
+
+## 🔮 SYSTEM EVOLUTION ROADMAP
+
+```
+PHASE 1
+Ambulance traffic prioritization system
+
+        ↓
+
+PHASE 2
+Integration with fire trucks and police vehicles
+
+        ↓
+
+PHASE 3
+City-wide smart traffic management integration
+
+        ↓
+
+PHASE 4
+AI-powered traffic prediction and automated routing
+
+        ↓
+
+PHASE 5
+Vehicle-to-vehicle communication alerts
+```
+
+---
+
+## 🌍 SMART CITY INTEGRATION
+
+Future integration possibilities include:
+
+- smart traffic infrastructure  
+- centralized city control centers  
+- IoT-enabled traffic signals  
+- emergency response coordination networks  
+
+---
+
+## 🧠 AI ENHANCEMENTS
+
+```bash
+$ future-module-ai
+> traffic congestion prediction
+> automated route optimization
+> intelligent signal coordination
+```
+
+AI systems could analyze traffic patterns and **predict congestion before emergencies occur**.
+
+---
+
+<p align="center">
+
+🚑 **NEXT-GENERATION EMERGENCY TRAFFIC SYSTEM**  
+🌍 **SMART CITY READY INFRASTRUCTURE**  
+⚡ **INTELLIGENT URBAN MOBILITY**
+
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+<!-- ================================================= -->
+<!-- LOGO PLACEHOLDER -->
+<!-- ================================================= -->
+
+<p align="center">
+
+<img src="LOGO_GIF_HERE.gif" width="200">
+
+</p>
+
+<p align="center">
+
+<img src="https://readme-typing-svg.herokuapp.com?font=Share+Tech+Mono&size=28&duration=2500&pause=900&color=FF3131&center=true&vCenter=true&width=800&lines=SMART+GREEN+CORRIDOR;EMERGENCY+TRAFFIC+OVERRIDE+SYSTEM;SAVING+LIVES+SAVING+TIME"/>
+
+</p>
+
+<p align="center">
+<img src="https://img.shields.io/badge/STATUS-ACTIVE-red?style=for-the-badge">
+<img src="https://img.shields.io/badge/SYSTEM-TRAFFIC%20CONTROL-cyan?style=for-the-badge">
+<img src="https://img.shields.io/badge/PROTOCOL-EMERGENCY%20ROUTE-green?style=for-the-badge">
+</p>
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
+</p>
+
+---
+
+# ⚠️ TRAFFIC GRID ALERT
+
+```diff
+- SYSTEM WARNING : EMERGENCY RESPONSE DELAY DETECTED
+- TRAFFIC INFRASTRUCTURE CONFLICT
+- URBAN CONGESTION LEVEL : CRITICAL
+```
+
+```bash
+$ scanning-city-traffic-grid
+> intersections scanned : 124
+> congestion detected : HIGH
+> emergency priority lanes : NOT AVAILABLE
+> response time delay : 4 - 8 minutes
+```
+
+Urban traffic congestion frequently **blocks ambulances during critical emergencies**, preventing rapid hospital access.
+
+```
+[ TRAFFIC SIGNAL DELAYS ]
+[ INTERSECTION CONGESTION ]
+[ BLOCKED LANES ]
+[ HUMAN RESPONSE DEPENDENCY ]
+```
+
+These obstacles create **dangerous delays during life-threatening situations where every second matters.**
+
+---
+
+# 💡 GREEN CORRIDOR PROTOCOL ACTIVATED
+
+```diff
++ EMERGENCY TRAFFIC PROTOCOL INITIALIZED
++ AMBULANCE PRIORITY MODE ENABLED
++ TRAFFIC SIGNAL OVERRIDE READY
+```
+
+```bash
+$ launching-smart-green-corridor-system
+> connecting to traffic grid
+> linking GPS ambulance node
+> calculating optimal emergency route
+> activating signal override protocol
+```
+
+The **Smart Green Corridor System** dynamically creates a **real-time green corridor for ambulances**.
+
+Instead of manual coordination, traffic signals are automatically synchronized to **clear intersections before the ambulance arrives**.
+
+---
+
+# ⚙️ SYSTEM ARCHITECTURE
+
+```bash
+$ initializing-traffic-control-architecture
+> ambulance node detected
+> cloud backend connected
+> traffic signal network mapped
+```
+
+```
+🚑 AMBULANCE APP
+       │
+       ▼
+📡 GPS LOCATION DATA
+       │
+       ▼
+☁️ CLOUD SERVER
+       │
+       ▼
+🧠 ETA PREDICTION ENGINE
+       │
+       ▼
+🚦 TRAFFIC SIGNAL CONTROL
+       │
+       ▼
+GREEN CORRIDOR CREATED
+```
+
+---
+
+# 🧠 TECHNOLOGY STACK
+
+```bash
+$ scanning-project-dependencies
+> mobile platform detected
+> backend infrastructure ready
+> database storage active
+```
+
+## 📱 Android Application
+
+Kotlin is used to develop the **Android mobile application** for ambulance drivers.
+
+<p align="center">
+<img src="https://skillicons.dev/icons?i=kotlin,androidstudio"/>
+</p>
+
+---
+
+## 🌐 Web Dashboard
+
+HTML and CSS are used to design the **central web dashboard** for monitoring traffic signals and ambulance movement.
+
+<p align="center">
+<img src="https://skillicons.dev/icons?i=html,css"/>
+</p>
+
+---
+
+## ⚙️ Backend API
+
+Express.js is used to build backend APIs that manage communication between the mobile app, dashboard, and database.
+
+<p align="center">
+<img src="https://skillicons.dev/icons?i=nodejs"/>
+</p>
+
+---
+
+## 💾 Database
+
+SQLite3 stores application data including ambulance sessions and route information.
+
+---
+
+# 📊 SYSTEM IMPACT
+
+```bash
+$ analysing-emergency-response-performance
+> traffic delay reduction : active
+> signal wait time : minimized
+> emergency efficiency : increased
+```
+
+| Impact Area | Improvement |
+|-------------|-------------|
+| Ambulance Travel Time | Reduced |
+| Signal Waiting Time | Eliminated |
+| Emergency Response | Faster |
+| Traffic Coordination | Automated |
+
+---
+
+# 🚀 FUTURE SCOPE
+
+```bash
+$ loading-development-roadmap
+> expansion modules detected
+```
+
+```
+PHASE 1 → Ambulance priority system
+PHASE 2 → Fire trucks & police integration
+PHASE 3 → Smart city traffic infrastructure
+PHASE 4 → AI traffic prediction
+PHASE 5 → Vehicle-to-vehicle alerts
+```
+
+---
+
+# 🎥 SYSTEM DEMO
+
+```bash
+$ loading-demo-environment
+> simulation ready
+```
+
+### Mobile App Interface
+
+APP SCREENSHOT HERE
+
+### Dashboard
+
+DASHBOARD SCREENSHOT HERE
+
+### Simulation
+
+GIF DEMO HERE
+
+### Demo Video
+
+VIDEO HERE
+
+---
+
+# 👥 TEAM
+
+```bash
+$ scanning-contributors
+> developers detected
+> system modules assigned
+```
+
+| Member | Role |
+|------|------|
+| **Hitesh N** | Team Leader • Backend Development • Database Architecture |
+| **Shyamanth Shetty** | Frontend Development • UI/UX Design |
+| **Amith Braggs** | Mobile Application Development |
+| **Alston Prince** | Mobile Application Development |
+
+---
+
+## ⚙️ TEAM RESPONSIBILITY MAP
+
+```
+BACKEND + DATABASE
+        │
+        ▼
+Hitesh N
+
+FRONTEND + DESIGN
+        │
+        ▼
+Shyamanth Shetty
+
+MOBILE APPLICATION
+        │
+        ▼
+Amith Braggs + Alston Prince
+```
+
+---
+
+<p align="center">
+
+🚑 **SMART GREEN CORRIDOR**  
+🚦 **INTELLIGENT EMERGENCY TRAFFIC SYSTEM**
 
 </p>
 
