@@ -9,6 +9,8 @@ let patientToHospitalLayer
 let tripSocket
 let currentTripId = null
 let currentVehicleNumber = null
+let signalMarkers = new Map()
+let currentSignals = []
 
 function getSelectedAmbulanceData(){
 const raw = sessionStorage.getItem("selectedAmbulanceData")
@@ -74,10 +76,7 @@ document.getElementById("priority").textContent = trip.severity || "—"
 document.getElementById("etaMinutes").textContent = String(trip.eta_to_hospital ?? "--")
 document.getElementById("remaining").textContent = `${trip.eta_to_hospital ?? "--"} min remaining`
 
-const signalPath = document.getElementById("signalPath")
-if(signalPath){
-signalPath.innerHTML = ""
-}
+renderSignals(trip.signals || [])
 }
 
 function updateEtaOnSidebar(etaToHospital){
@@ -88,6 +87,135 @@ return
 document.getElementById("eta").textContent = `${etaToHospital} min`
 document.getElementById("etaMinutes").textContent = String(etaToHospital)
 document.getElementById("remaining").textContent = `${etaToHospital} min remaining`
+}
+
+function formatSignalEta(seconds){
+if(seconds === null || seconds === undefined || Number.isNaN(Number(seconds))){
+return "ETA unavailable"
+}
+
+if(Number(seconds) < 60){
+return `${Math.max(0, Math.round(Number(seconds)))} sec`
+}
+
+return `${Math.round(Number(seconds) / 60)} min`
+}
+
+function getSignalMarkerColor(signal){
+if(signal.priority_override){
+return "priority"
+}
+
+return String(signal.current_color || "RED").toLowerCase()
+}
+
+function buildSignalPopup(signal){
+return `
+<div>
+<strong>Signal ${signal.id}</strong><br>
+Traffic: ${signal.traffic_level || "UNKNOWN"}<br>
+Ratio: ${signal.traffic_ratio ?? "—"}<br>
+ETA: ${formatSignalEta(signal.eta_seconds)}<br>
+Color: ${signal.current_color || "—"}<br>
+Priority override: ${signal.priority_override ? "Yes" : "No"}
+</div>
+`
+}
+
+function createSignalIcon(signal){
+const markerType = getSignalMarkerColor(signal)
+return L.divIcon({
+className: "custom-signal-icon",
+html: `<div class="signal-marker ${markerType}">🚦</div>`,
+iconSize: [28, 28],
+iconAnchor: [14, 14]
+})
+}
+
+function renderSignalMarkers(signals){
+if(!map){
+return
+}
+
+const signalIds = new Set()
+
+signals.forEach((signal) => {
+const signalId = String(signal.id)
+signalIds.add(signalId)
+
+if(!signalMarkers.has(signalId)){
+const marker = L.marker([signal.lat, signal.lon], { icon: createSignalIcon(signal) })
+marker.addTo(map)
+signalMarkers.set(signalId, marker)
+}
+
+const marker = signalMarkers.get(signalId)
+marker.setLatLng([signal.lat, signal.lon])
+marker.setIcon(createSignalIcon(signal))
+marker.bindPopup(buildSignalPopup(signal))
+})
+
+Array.from(signalMarkers.keys()).forEach((signalId) => {
+if(!signalIds.has(signalId)){
+const marker = signalMarkers.get(signalId)
+if(marker){
+marker.remove()
+}
+signalMarkers.delete(signalId)
+}
+})
+}
+
+function renderSignals(signals){
+currentSignals = Array.isArray(signals) ? signals : []
+
+const signalPath = document.getElementById("signalPath")
+const signalList = document.getElementById("signalList")
+const nextSignal = document.getElementById("nextSignal")
+const aheadSignals = currentSignals
+	.filter(signal => !signal.passed)
+	.sort((left, right) => {
+		const leftEta = Number.isFinite(Number(left.eta_seconds)) ? Number(left.eta_seconds) : Number.POSITIVE_INFINITY
+		const rightEta = Number.isFinite(Number(right.eta_seconds)) ? Number(right.eta_seconds) : Number.POSITIVE_INFINITY
+		return leftEta - rightEta
+	})
+
+if(signalPath){
+signalPath.innerHTML = aheadSignals.length > 0
+	? aheadSignals.slice(0, 6).map((signal) => `
+		<div class="signal ${getSignalMarkerColor(signal)}">
+			<div class="light ${String(signal.current_color || 'RED').toLowerCase()}"></div>
+		</div>
+	`).join("")
+	: '<span class="signal-empty">No signals ahead</span>'
+}
+
+if(nextSignal){
+const next = aheadSignals[0]
+nextSignal.textContent = next
+	? `Signal ${next.id} • ${formatSignalEta(next.eta_seconds)} • ${next.current_color}${next.priority_override ? ' priority' : ''}`
+	: "No upcoming signal"
+}
+
+if(signalList){
+signalList.innerHTML = aheadSignals.length > 0
+	? aheadSignals.map((signal) => `
+		<div class="signal-list-item ${getSignalMarkerColor(signal)}">
+			<div class="signal-list-head">
+				<strong>🚦 Signal ${signal.id}</strong>
+				<span>${signal.current_color}${signal.priority_override ? ' · Priority' : ''}</span>
+			</div>
+			<div class="signal-list-meta">
+				<span>ETA: ${formatSignalEta(signal.eta_seconds)}</span>
+				<span>Traffic: ${signal.traffic_level || 'UNKNOWN'}</span>
+				<span>Ratio: ${signal.traffic_ratio ?? '—'}</span>
+			</div>
+		</div>
+	`).join("")
+	: '<div class="signal-empty">No traffic signals detected on this route.</div>'
+}
+
+renderSignalMarkers(currentSignals)
 }
 
 function upsertAmbulanceLiveMarker(lat, lon){
@@ -117,10 +245,6 @@ tripSocket.addEventListener("message", (event) => {
 try{
 const payload = JSON.parse(event.data)
 
-if(payload.type !== "live_location_update"){
-return
-}
-
 const matchedByTripId = currentTripId && payload.trip_id && Number(currentTripId) === Number(payload.trip_id)
 const matchedByVehicle = currentVehicleNumber && payload.vehicle_number && String(currentVehicleNumber).toUpperCase() === String(payload.vehicle_number).toUpperCase()
 
@@ -128,8 +252,21 @@ if(!matchedByTripId && !matchedByVehicle){
 return
 }
 
+if(payload.type === "live_location_update"){
 upsertAmbulanceLiveMarker(payload.lat, payload.lon)
 updateEtaOnSidebar(payload.eta_to_hospital)
+if(Array.isArray(payload.signals)){
+renderSignals(payload.signals)
+}
+return
+}
+
+if(payload.type === "trip_signals_update"){
+if(Number.isFinite(Number(payload.ambulanceLat)) && Number.isFinite(Number(payload.ambulanceLon))){
+upsertAmbulanceLiveMarker(payload.ambulanceLat, payload.ambulanceLon)
+}
+renderSignals(payload.signals || [])
+}
 }catch(error){
 console.error("Invalid websocket payload", error)
 }
@@ -156,10 +293,19 @@ L.tileLayer(
 patientMarker = L.marker([patientPoint.lat,patientPoint.lng]).addTo(map).bindPopup("🧍 Patient")
 hospitalMarker = L.marker([hospitalPoint.lat,hospitalPoint.lng]).addTo(map).bindPopup("🏥 Hospital")
 
+if(Number.isFinite(Number(trip.ambulance_lat)) && Number.isFinite(Number(trip.ambulance_lon))){
+upsertAmbulanceLiveMarker(trip.ambulance_lat, trip.ambulance_lon)
+}
+
 setLoader(true, "Loading route...")
 
 try{
-const patientToHospitalGeo = await getRouteGeoJsonFromOSRM(patientPoint, hospitalPoint)
+const patientToHospitalGeo = trip.route?.coordinates?.length
+? {
+type: "LineString",
+coordinates: trip.route.coordinates.map(point => [point.lon, point.lat])
+}
+: await getRouteGeoJsonFromOSRM(patientPoint, hospitalPoint)
 
 patientToHospitalLayer = L.geoJSON(patientToHospitalGeo,{
 style:{

@@ -1,14 +1,64 @@
 const express = require('express');
 const router = express.Router();
-const { getQuery, runQuery } = require('./database');
+const { allQuery, getQuery, runQuery } = require('./database');
 const { verifyAuthToken } = require('./authToken');
 const { getActiveTripsForDriver } = require('./activeTripsService');
 const { broadcastAllTrips } = require('./activeTripsRealtime');
+const {
+    ensureTripSignalSimulation,
+    attachRuntimeDataToTrip,
+    getTripVisualizationPayload,
+    stopTripSignalSimulation
+} = require('./services/signalSimulationService');
 
 const ALLOWED_SEVERITIES = new Set(['CRITICAL', 'MODERATE', 'STABLE']);
 
 function getAuthenticatedDriverId(req) {
     return req.user?.driver_id || req.user?.driverId;
+}
+
+async function resolveVehicleNumberForDeactivation(driverId, vehicleIdRaw) {
+    if (typeof vehicleIdRaw === 'string') {
+        const normalized = vehicleIdRaw.trim().toUpperCase();
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    const numericVehicleId = Number(vehicleIdRaw);
+    if (!Number.isInteger(numericVehicleId) || numericVehicleId <= 0) {
+        return '';
+    }
+
+    const activeTripById = await getQuery(
+        `
+            SELECT vehicle_number
+            FROM active_trips
+            WHERE driver_id = ? AND id = ?
+            LIMIT 1
+        `,
+        [driverId, numericVehicleId]
+    );
+
+    if (activeTripById?.vehicle_number) {
+        return String(activeTripById.vehicle_number).trim().toUpperCase();
+    }
+
+    const registeredAmbulanceById = await getQuery(
+        `
+            SELECT vehicle_number
+            FROM driver_ambulances
+            WHERE driver_id = ? AND id = ?
+            LIMIT 1
+        `,
+        [driverId, numericVehicleId]
+    );
+
+    if (registeredAmbulanceById?.vehicle_number) {
+        return String(registeredAmbulanceById.vehicle_number).trim().toUpperCase();
+    }
+
+    return '';
 }
 
 router.post('/active', verifyAuthToken, async (req, res) => {
@@ -81,6 +131,26 @@ router.post('/active', verifyAuthToken, async (req, res) => {
             });
         }
 
+        const existingActiveTrip = await getQuery(
+            `
+                SELECT id, driver_id, vehicle_number, severity, start_time
+                FROM active_trips
+                WHERE vehicle_number = ?
+                ORDER BY start_time DESC
+                LIMIT 1
+            `,
+            [normalizedVehicleNumber]
+        );
+
+        if (existingActiveTrip) {
+            return res.status(409).json({
+                message: existingActiveTrip.driver_id === Number(driverId)
+                    ? 'This ambulance already has an active trip under this driver'
+                    : 'This ambulance is currently active and cannot be engaged by another driver',
+                active_trip: existingActiveTrip
+            });
+        }
+
         const result = await runQuery(
             `
                 INSERT INTO active_trips (
@@ -131,15 +201,115 @@ router.post('/active', verifyAuthToken, async (req, res) => {
             [result.lastID]
         );
 
+        await ensureTripSignalSimulation(createdTrip);
+
         await broadcastAllTrips();
 
         return res.status(201).json({
             message: 'Active trip created successfully',
-            trip: createdTrip
+            trip: attachRuntimeDataToTrip(createdTrip)
         });
     } catch (error) {
         return res.status(500).json({
             message: 'Failed to create active trip',
+            error: error.message
+        });
+    }
+});
+
+router.post('/active/deactivate', verifyAuthToken, async (req, res) => {
+    console.log("Recieved for deactivation");
+    const tokenDriverId = getAuthenticatedDriverId(req);
+    const driverIdRaw = req.body?.driver_id;
+    const vehicleIdRaw = req.body?.vehicle_id ?? req.body?.vehicle_number;
+
+    console.log(`[DEACTIVATE] driver_id (body)=${driverIdRaw} | vehicle_id=${vehicleIdRaw}`);
+
+    const driverId = Number(tokenDriverId);
+
+    if (!tokenDriverId) {
+        return res.status(401).json({
+            message: 'Authenticated driver id not found in token'
+        });
+    }
+
+    if (vehicleIdRaw === undefined || vehicleIdRaw === null || String(vehicleIdRaw).trim() === '') {
+        return res.status(400).json({
+            message: 'vehicle_id (or vehicle_number) is required'
+        });
+    }
+
+    try {
+        const vehicleNumber = await resolveVehicleNumberForDeactivation(driverId, vehicleIdRaw);
+
+        if (!vehicleNumber) {
+            return res.status(404).json({
+                message: 'Unable to resolve vehicle from provided vehicle_id/vehicle_number for this driver',
+                driver_id: driverId,
+                vehicle_id: vehicleIdRaw
+            });
+        }
+
+        const driverOwnsVehicle = await getQuery(
+            `
+                SELECT id, driver_id, vehicle_number
+                FROM driver_ambulances
+                WHERE driver_id = ? AND vehicle_number = ?
+                LIMIT 1
+            `,
+            [driverId, vehicleNumber]
+        );
+
+        if (!driverOwnsVehicle) {
+            return res.status(403).json({
+                message: 'This vehicle is not registered under the authenticated driver',
+                driver_id: driverId,
+                vehicle_number: vehicleNumber
+            });
+        }
+
+        const tripsToDeactivate = await allQuery(
+            `
+                SELECT id, driver_id, vehicle_number, severity, start_time
+                FROM active_trips
+                WHERE vehicle_number = ?
+                ORDER BY start_time DESC
+            `,
+            [vehicleNumber]
+        );
+
+        if (tripsToDeactivate.length === 0) {
+            return res.status(404).json({
+                message: 'No active trip found for this vehicle',
+                driver_id: driverId,
+                vehicle_number: vehicleNumber
+            });
+        }
+
+        const deletionResult = await runQuery(
+            `
+                DELETE FROM active_trips
+                WHERE vehicle_number = ?
+            `,
+            [vehicleNumber]
+        );
+
+        tripsToDeactivate.forEach((trip) => {
+            stopTripSignalSimulation(trip.id);
+        });
+
+        await broadcastAllTrips();
+
+        return res.json({
+            message: 'Ambulance removed from active list successfully',
+            driver_id: driverId,
+            vehicle_number: vehicleNumber,
+            removed_count: deletionResult.changes,
+            removed_trips: tripsToDeactivate
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Failed to deactivate active ambulance',
             error: error.message
         });
     }
@@ -160,7 +330,7 @@ router.get('/active', verifyAuthToken, async (req, res) => {
         return res.json({
             driver_id: Number(driverId),
             count: trips.length,
-            trips
+            trips: trips.map(attachRuntimeDataToTrip)
         });
     } catch (error) {
         return res.status(500).json({
@@ -211,8 +381,14 @@ router.get('/active/public/:tripId', async (req, res) => {
             });
         }
 
+        await ensureTripSignalSimulation(trip);
+        const visualization = getTripVisualizationPayload(tripId);
+
         return res.json({
-            trip
+            trip: {
+                ...trip,
+                ...(visualization || {})
+            }
         });
     } catch (error) {
         return res.status(500).json({

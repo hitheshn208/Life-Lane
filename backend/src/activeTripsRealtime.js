@@ -1,7 +1,17 @@
 const { WebSocketServer, WebSocket } = require('ws');
 const { getAllActiveTrips } = require('./activeTripsService');
+const {
+    ensureTripSignalSimulation,
+    attachRuntimeDataToTrips,
+    setSignalBroadcastHandler,
+    setMobileSignalBroadcastHandler,
+    updateAmbulanceLocation,
+    getMobileSignalPayload
+} = require('./services/signalSimulationService');
 
 const connectedClients = new Set();
+const mobileSocketsByTrip = new Map(); // tripId (number) -> socket
+const mobileSocketsByVehicle = new Map(); // vehicle_number (uppercase) -> socket
 
 function sendJson(socket, payload) {
     if (socket.readyState === WebSocket.OPEN) {
@@ -9,10 +19,30 @@ function sendJson(socket, payload) {
     }
 }
 
+function sendSignalUpdateToMobile(payload) {
+    const tripId = payload.trip_id;
+    const vehicleNumber = payload.vehicle_number ? String(payload.vehicle_number).trim().toUpperCase() : '';
+    const socket = mobileSocketsByTrip.get(tripId) || mobileSocketsByVehicle.get(vehicleNumber);
+    if (socket) {
+        console.log(
+            `[MOBILE_SIGNAL_SENT] trip_id=${tripId} reason=${payload.reason || 'unknown'} signals=${Array.isArray(payload.signals) ? payload.signals.length : 0}`
+        );
+        sendJson(socket, payload);
+    } else {
+        console.log(
+            `[MOBILE_SIGNAL_SKIPPED] trip_id=${tripId} vehicle=${vehicleNumber || 'unknown'} reason=${payload.reason || 'unknown'} no_mobile_socket_mapping=true`
+        );
+    }
+}
+
 async function broadcastAllTrips() {
     if (connectedClients.size === 0) return;
 
-    const trips = await getAllActiveTrips();
+    const activeTrips = await getAllActiveTrips();
+    await Promise.all(
+        (activeTrips || []).map((trip) => ensureTripSignalSimulation(trip).catch(() => null))
+    );
+    const trips = attachRuntimeDataToTrips(activeTrips);
     const payload = {
         type: 'active_trips_snapshot',
         count: trips.length,
@@ -34,7 +64,40 @@ function broadcastLiveLocationUpdate(updatePayload) {
     connectedClients.forEach((socket) => sendJson(socket, payload));
 }
 
+function broadcastTripSignalsUpdate(updatePayload) {
+    if (connectedClients.size === 0) return;
+
+    connectedClients.forEach((socket) => sendJson(socket, updatePayload));
+}
+
+function sendInitialSignalDetails(socket, trips) {
+    (trips || []).forEach((trip) => {
+        if (!Array.isArray(trip.signals) || trip.signals.length === 0) {
+            return;
+        }
+
+        sendJson(socket, {
+            type: 'trip_signals_update',
+            reason: 'ws_connected',
+            tripId: Number(trip.id),
+            trip_id: Number(trip.id),
+            vehicle_number: trip.vehicle_number,
+            eta_to_hospital: trip.eta_to_hospital ?? null,
+            ambulanceLat: trip.ambulanceLat ?? trip.ambulance_lat ?? null,
+            ambulanceLon: trip.ambulanceLon ?? trip.ambulance_lon ?? null,
+            ambulance_lat: trip.ambulance_lat ?? trip.ambulanceLat ?? null,
+            ambulance_lon: trip.ambulance_lon ?? trip.ambulanceLon ?? null,
+            signals: trip.signals,
+            route: trip.route || null,
+            updated_at: new Date().toISOString()
+        });
+    });
+}
+
 function initializeActiveTripsSocket(server) {
+    setSignalBroadcastHandler((payload) => broadcastTripSignalsUpdate(payload));
+    setMobileSignalBroadcastHandler((payload) => sendSignalUpdateToMobile(payload));
+
     const wss = new WebSocketServer({
         server,
         path: '/ws/active-trips'
@@ -45,6 +108,10 @@ function initializeActiveTripsSocket(server) {
 
         const requestUrl = new URL(request.url, 'http://localhost');
         const role = requestUrl.searchParams.get('role') || 'web';
+        const tripIdRaw = requestUrl.searchParams.get('trip_id') || requestUrl.searchParams.get('tripId');
+        const tripId = Number(tripIdRaw);
+        const vehicleNumberRaw = requestUrl.searchParams.get('vehicle_number') || requestUrl.searchParams.get('vehicleNumber');
+        const vehicleNumber = vehicleNumberRaw ? String(vehicleNumberRaw).trim().toUpperCase() : null;
 
         sendJson(socket, {
             type: 'connection_ack',
@@ -53,12 +120,36 @@ function initializeActiveTripsSocket(server) {
         });
 
         // Send immediate snapshot to the newly connected client
-        const trips = await getAllActiveTrips();
+        const activeTrips = await getAllActiveTrips();
+        await Promise.all(
+            (activeTrips || []).map((trip) => ensureTripSignalSimulation(trip).catch(() => null))
+        );
+        const trips = attachRuntimeDataToTrips(activeTrips);
         sendJson(socket, {
             type: 'active_trips_snapshot',
             count: trips.length,
             trips
         });
+
+        sendInitialSignalDetails(socket, trips);
+
+        if (role === 'mobile' && Number.isFinite(tripId) && tripId > 0) {
+            mobileSocketsByTrip.set(tripId, socket);
+        }
+
+        if (role === 'mobile' && vehicleNumber) {
+            mobileSocketsByVehicle.set(vehicleNumber, socket);
+        }
+
+        const initialMobileSignalPayload = getMobileSignalPayload({
+            tripId: Number.isFinite(tripId) && tripId > 0 ? tripId : null,
+            vehicle_number: vehicleNumber,
+            reason: 'ws_connected'
+        });
+
+        if (initialMobileSignalPayload) {
+            sendJson(socket, initialMobileSignalPayload);
+        }
 
         socket.on('message', (rawMessage) => {
             try {
@@ -98,13 +189,31 @@ function initializeActiveTripsSocket(server) {
                     return;
                 }
 
+                // Track which socket belongs to this trip so signal updates can be sent back
+                if (hasTripId) {
+                    mobileSocketsByTrip.set(trip_id, socket);
+                }
+
+                if (hasVehicle) {
+                    mobileSocketsByVehicle.set(vehicle_number, socket);
+                }
+
+                const signalPayload = updateAmbulanceLocation({
+                    tripId: hasTripId ? trip_id : null,
+                    vehicle_number: hasVehicle ? vehicle_number : null,
+                    lat,
+                    lon,
+                    eta_to_hospital: Number.isFinite(eta_to_hospital) ? eta_to_hospital : null
+                });
+
                 broadcastLiveLocationUpdate({
                     source: 'mobile',
                     trip_id: hasTripId ? trip_id : null,
                     vehicle_number: hasVehicle ? vehicle_number : null,
                     lat,
                     lon,
-                    eta_to_hospital: Number.isFinite(eta_to_hospital) ? eta_to_hospital : null
+                    eta_to_hospital: Number.isFinite(eta_to_hospital) ? eta_to_hospital : null,
+                    signals: signalPayload?.signals || []
                 });
             } catch (_error) {
                 sendJson(socket, {
@@ -114,8 +223,27 @@ function initializeActiveTripsSocket(server) {
             }
         });
 
-        socket.on('close', () => connectedClients.delete(socket));
-        socket.on('error', () => connectedClients.delete(socket));
+        socket.on('close', () => {
+            connectedClients.delete(socket);
+            // Remove any trip->socket mapping for this socket
+            for (const [tripId, s] of mobileSocketsByTrip.entries()) {
+                if (s === socket) mobileSocketsByTrip.delete(tripId);
+            }
+
+            for (const [vehicleNumber, s] of mobileSocketsByVehicle.entries()) {
+                if (s === socket) mobileSocketsByVehicle.delete(vehicleNumber);
+            }
+        });
+        socket.on('error', () => {
+            connectedClients.delete(socket);
+            for (const [tripId, s] of mobileSocketsByTrip.entries()) {
+                if (s === socket) mobileSocketsByTrip.delete(tripId);
+            }
+
+            for (const [vehicleNumber, s] of mobileSocketsByVehicle.entries()) {
+                if (s === socket) mobileSocketsByVehicle.delete(vehicleNumber);
+            }
+        });
     });
 
     return wss;
@@ -124,5 +252,6 @@ function initializeActiveTripsSocket(server) {
 module.exports = {
     initializeActiveTripsSocket,
     broadcastAllTrips,
-    broadcastLiveLocationUpdate
+    broadcastLiveLocationUpdate,
+    broadcastTripSignalsUpdate
 };
