@@ -76,7 +76,7 @@ card.className = "ambulance-card"
 
 card.innerHTML = `
 <div class="ambulance-info">
-<div class="ambulance-icon">🚑</div>
+<div class="ambulance-icon">+</div>
 <div class="info-text">
 <h3>${trip.vehicle_number}</h3>
 <p>${trip.ambulance_name}</p>
