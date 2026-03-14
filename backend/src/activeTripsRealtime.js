@@ -11,7 +11,7 @@ const {
     stopTripSignalSimulation
 } = require('./services/signalSimulationService');
 
-const MOBILE_SOCKET_TIMEOUT_MS = 10000;
+const MOBILE_SOCKET_TIMEOUT_MS = 30000;
 
 const connectedClients = new Set();
 const visualClients = new Set();
@@ -474,7 +474,7 @@ function initializeActiveTripsSocket(server) {
         });
 
         socket.on('close', () => {
-            clearMobileSocketTimeout(socket);
+            deactivateTripOnMobileSocketTimeout(socket).catch(console.error);
             connectedClients.delete(socket);
             visualClients.delete(socket);
             removeMobileSocketMappings(socket);
@@ -484,7 +484,7 @@ function initializeActiveTripsSocket(server) {
         });
 
         socket.on('error', () => {
-            clearMobileSocketTimeout(socket);
+            deactivateTripOnMobileSocketTimeout(socket).catch(console.error);
             connectedClients.delete(socket);
             visualClients.delete(socket);
             removeMobileSocketMappings(socket);

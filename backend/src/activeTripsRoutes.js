@@ -3,7 +3,7 @@ const router = express.Router();
 const { allQuery, getQuery, runQuery } = require('./database');
 const { verifyAuthToken } = require('./authToken');
 const { getActiveTripsForDriver } = require('./activeTripsService');
-const { broadcastAllTrips, closeTripConnections } = require('./activeTripsRealtime');
+const { broadcastAllTrips } = require('./activeTripsRealtime');
 const {
     ensureTripSignalSimulation,
     attachRuntimeDataToTrip,
@@ -223,9 +223,7 @@ router.post('/active/deactivate', verifyAuthToken, async (req, res) => {
     const driverIdRaw = req.body?.driver_id;
     const vehicleIdRaw = req.body?.vehicle_id ?? req.body?.vehicle_number;
 
-    console.log(`[DEACTIVATE] driver_id (body)=${driverIdRaw} | vehicle_id=${vehicleIdRaw}`);
-
-    const driverId = Number(tokenDriverId);
+    const driverId = Number(driverIdRaw);
 
     if (!tokenDriverId) {
         return res.status(401).json({
@@ -233,9 +231,15 @@ router.post('/active/deactivate', verifyAuthToken, async (req, res) => {
         });
     }
 
-    if (vehicleIdRaw === undefined || vehicleIdRaw === null || String(vehicleIdRaw).trim() === '') {
+    if (!Number.isInteger(driverId) || driverId <= 0 || vehicleIdRaw === undefined || vehicleIdRaw === null || String(vehicleIdRaw).trim() === '') {
         return res.status(400).json({
-            message: 'vehicle_id (or vehicle_number) is required'
+            message: 'driver_id and vehicle_id (or vehicle_number) are required'
+        });
+    }
+
+    if (Number(tokenDriverId) !== driverId) {
+        return res.status(403).json({
+            message: 'driver_id does not match authenticated token'
         });
     }
 
@@ -295,11 +299,6 @@ router.post('/active/deactivate', verifyAuthToken, async (req, res) => {
         );
 
         tripsToDeactivate.forEach((trip) => {
-            closeTripConnections({
-                tripId: trip.id,
-                vehicleNumber: trip.vehicle_number,
-                reason: 'trip_removed_from_db'
-            });
             stopTripSignalSimulation(trip.id);
         });
 

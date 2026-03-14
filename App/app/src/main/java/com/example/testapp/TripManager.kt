@@ -86,12 +86,7 @@ class TripManager(private val vehicleNumber: String) {
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e("TripManager", "Error: ${t.message}")
-                if (isTripActive) {
-                    scope.launch {
-                        delay(5000)
-                        connect()
-                    }
-                }
+                this@TripManager.webSocket = null
             }
         })
     }

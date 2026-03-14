@@ -133,9 +133,9 @@ db.serialize(() => {
         INSERT OR IGNORE INTO govt_ambulances (vehicle_number, ambulance_name, ambulance_type, registered_hospital)
         VALUES
         ('KA19AB1023', 'LifeLine Rapid Response', 'ALS', 'City Hospital'),
-        ('KA19AB2201', 'Apollo Emergency One', 'BLS', 'Apollo Hospital'),
-        ('KA19AB3320', 'District Care Mobile', 'Patient Transport', 'District Hospital'),
-        ('KA19AB8741', 'Manipal Critical Care', 'ALS', 'Manipal Hospital'),
+        ('KA19AB1234', 'Apollo Emergency One', 'BLS', 'Apollo Hospital'),
+        ('KA19AB5678', 'District Care Mobile', 'Patient Transport', 'District Hospital'),
+        ('KA19AB9101', 'Manipal Critical Care', 'ALS', 'Manipal Hospital'),
         ('KA19AB8812', 'Aster Med Transit', 'BLS', 'Aster Hospital'),
         ('KA19AB4521', 'Nitte Trauma Support', 'ALS', 'Nitte Hospital'),
         ('KA19AB9912', 'KMC Rural Response', 'BLS', 'KMC Hospital')
