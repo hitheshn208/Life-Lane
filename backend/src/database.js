@@ -95,6 +95,38 @@ db.serialize(() => {
         }
 
         console.log('active_trips table is ready');
+
+        db.run(
+            `
+                DELETE FROM active_trips
+                WHERE id NOT IN (
+                    SELECT MAX(id)
+                    FROM active_trips
+                    GROUP BY vehicle_number
+                )
+            `,
+            (dedupeError) => {
+                if (dedupeError) {
+                    console.error('Failed to deduplicate active_trips rows:', dedupeError.message);
+                    return;
+                }
+
+                db.run(
+                    `
+                        CREATE UNIQUE INDEX IF NOT EXISTS idx_active_trips_vehicle_unique
+                        ON active_trips(vehicle_number)
+                    `,
+                    (indexError) => {
+                        if (indexError) {
+                            console.error('Failed to enforce unique active trip per vehicle:', indexError.message);
+                            return;
+                        }
+
+                        console.log('active_trips unique vehicle index is ready');
+                    }
+                );
+            }
+        );
     });
 
     db.run(`

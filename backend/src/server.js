@@ -31,9 +31,10 @@ const server = http.createServer(app);
 const authRoutes = require('./auth');
 const ambulanceRoutes = require('./ambulanceRoutes');
 const activeTripsRoutes = require('./activeTripsRoutes');
-const { initializeActiveTripsSocket } = require('./activeTripsRealtime');
+const { db } = require('./database');
+const { initializeActiveTripsSocket, shutdownActiveTripsSocketServer } = require('./activeTripsRealtime');
 const { getAllActiveTrips } = require('./activeTripsService');
-const { bootstrapTripSignalSimulations } = require('./services/signalSimulationService');
+const { bootstrapTripSignalSimulations, stopAllTripSignalSimulations } = require('./services/signalSimulationService');
 
 app.use(express.json());
 
@@ -75,10 +76,33 @@ server.listen(PORT, '0.0.0.0', async () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
 
-process.on('SIGTERM', () => {
-    server.close(() => process.exit(0));
-});
+let isShuttingDown = false;
 
-process.on('SIGINT', () => {
-    server.close(() => process.exit(0));
-});
+function shutdown(signal) {
+    if (isShuttingDown) {
+        return;
+    }
+
+    isShuttingDown = true;
+    console.log(`Received ${signal}. Shutting down...`);
+
+    const forceExitTimer = setTimeout(() => {
+        console.error('Forced shutdown after timeout');
+        process.exit(1);
+    }, 3000);
+
+    forceExitTimer.unref();
+
+    shutdownActiveTripsSocketServer();
+    stopAllTripSignalSimulations();
+
+    server.close(() => {
+        db.close(() => {
+            clearTimeout(forceExitTimer);
+            process.exit(0);
+        });
+    });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

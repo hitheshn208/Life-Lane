@@ -520,6 +520,12 @@ function stopTripSignalSimulation(tripId) {
     return true;
 }
 
+function stopAllTripSignalSimulations() {
+    Array.from(tripSignalStates.keys()).forEach((tripId) => {
+        stopTripSignalSimulation(tripId);
+    });
+}
+
 function updateAmbulanceLocation({ tripId, vehicle_number, lat, lon, eta_to_hospital }) {
     const tripState = getTripStateById(tripId) || getTripStateByVehicleNumber(vehicle_number);
 
@@ -591,6 +597,7 @@ module.exports = {
     setSignalBroadcastHandler,
     setMobileSignalBroadcastHandler,
     stopTripSignalSimulation,
+    stopAllTripSignalSimulations,
     updateAmbulanceLocation,
     attachRuntimeDataToTrip,
     attachRuntimeDataToTrips,

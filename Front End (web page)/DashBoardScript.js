@@ -25,7 +25,50 @@ let activeTrips = []
 let activeFilters = []
 let socket = null
 let reconnectTimer = null
+const recentlyDeactivatedTrips = new Map()
 const DASHBOARD_SIGNAL_ROUTE_MAX_METERS = 6
+const DEACTIVATION_IGNORE_WINDOW_MS = 15000
+
+function pruneRecentlyDeactivatedTrips() {
+	const now = Date.now()
+
+	Array.from(recentlyDeactivatedTrips.entries()).forEach(([key, expiresAt]) => {
+		if (expiresAt <= now) {
+			recentlyDeactivatedTrips.delete(key)
+		}
+	})
+}
+
+function getTripDeactivationKeys(payload) {
+	const keys = []
+
+	if (payload.tripId && Number.isFinite(Number(payload.tripId))) {
+		keys.push(`trip:${Number(payload.tripId)}`)
+	}
+
+	if (payload.trip_id && Number.isFinite(Number(payload.trip_id))) {
+		keys.push(`trip:${Number(payload.trip_id)}`)
+	}
+
+	if (payload.vehicle_number) {
+		keys.push(`vehicle:${String(payload.vehicle_number).toUpperCase()}`)
+	}
+
+	return keys
+}
+
+function markTripAsRecentlyDeactivated(payload) {
+	pruneRecentlyDeactivatedTrips()
+	const expiresAt = Date.now() + DEACTIVATION_IGNORE_WINDOW_MS
+	getTripDeactivationKeys(payload).forEach((key) => {
+		recentlyDeactivatedTrips.set(key, expiresAt)
+	})
+}
+
+function isRecentlyDeactivated(payload) {
+	pruneRecentlyDeactivatedTrips()
+	return getTripDeactivationKeys(payload).some((key) => recentlyDeactivatedTrips.has(key))
+}
 
 function setConnectionStatus(text, state) {
 	if (!connectionStatus) {
@@ -261,6 +304,10 @@ function findTripIndex(payload) {
 }
 
 function mergeTripPayload(payload) {
+	if (isRecentlyDeactivated(payload)) {
+		return
+	}
+
 	const index = findTripIndex(payload)
 
 	if (index < 0) {
@@ -313,6 +360,26 @@ function mergeTripPayload(payload) {
 	}
 }
 
+function removeTripFromDashboard(payload) {
+	markTripAsRecentlyDeactivated(payload)
+
+	activeTrips = activeTrips.filter((trip) => {
+		if (payload.tripId && Number(trip.id) === Number(payload.tripId)) {
+			return false
+		}
+
+		if (payload.trip_id && Number(trip.id) === Number(payload.trip_id)) {
+			return false
+		}
+
+		if (payload.vehicle_number && String(trip.vehicle_number).toUpperCase() === String(payload.vehicle_number).toUpperCase()) {
+			return false
+		}
+
+		return true
+	})
+}
+
 function connectActiveTripsSocket() {
 	if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
 		return
@@ -341,6 +408,12 @@ function connectActiveTripsSocket() {
 
 			if (payload.type === "live_location_update" || payload.type === "trip_signals_update") {
 				mergeTripPayload(payload)
+				renderAmbulances()
+				return
+			}
+
+			if (payload.type === "trip_deactivated") {
+				removeTripFromDashboard(payload)
 				renderAmbulances()
 				return
 			}

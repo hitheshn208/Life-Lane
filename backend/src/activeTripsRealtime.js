@@ -1,18 +1,23 @@
 const { WebSocketServer, WebSocket } = require('ws');
 const { getAllActiveTrips } = require('./activeTripsService');
+const { allQuery, runQuery } = require('./database');
 const {
     ensureTripSignalSimulation,
     attachRuntimeDataToTrips,
     setSignalBroadcastHandler,
     setMobileSignalBroadcastHandler,
     updateAmbulanceLocation,
-    getMobileSignalPayload
+    getMobileSignalPayload,
+    stopTripSignalSimulation
 } = require('./services/signalSimulationService');
+
+const MOBILE_SOCKET_TIMEOUT_MS = 10000;
 
 const connectedClients = new Set();
 const visualClients = new Set();
 const mobileSocketsByTrip = new Map();
 const mobileSocketsByVehicle = new Map();
+let activeTripsWss = null;
 
 function normalizeVehicleNumber(value) {
     if (value === undefined || value === null) {
@@ -71,10 +76,122 @@ function sendTripDeactivatedAndClose(socket, payload) {
     }
 }
 
+function broadcastTripDeactivated(payload) {
+    if (visualClients.size === 0) {
+        return;
+    }
+
+    const message = {
+        type: 'trip_deactivated',
+        ...payload,
+        updated_at: new Date().toISOString()
+    };
+
+    visualClients.forEach((socket) => sendJson(socket, message));
+}
+
+async function deactivateTripOnMobileSocketTimeout(socket) {
+    if (!socket || socket.meta?.timeoutHandled) {
+        return;
+    }
+
+    socket.meta.timeoutHandled = true;
+
+    const tripId = Number(socket.meta?.tripId);
+    const vehicleNumber = normalizeVehicleNumber(socket.meta?.vehicleNumber);
+
+    if ((!Number.isFinite(tripId) || tripId <= 0) && !vehicleNumber) {
+        return;
+    }
+
+    let tripsToDeactivate = [];
+
+    if (Number.isFinite(tripId) && tripId > 0) {
+        tripsToDeactivate = await allQuery(
+            `
+                SELECT id, vehicle_number
+                FROM active_trips
+                WHERE id = ?
+            `,
+            [tripId]
+        );
+    }
+
+    if (tripsToDeactivate.length === 0 && vehicleNumber) {
+        tripsToDeactivate = await allQuery(
+            `
+                SELECT id, vehicle_number
+                FROM active_trips
+                WHERE UPPER(TRIM(vehicle_number)) = ?
+            `,
+            [vehicleNumber]
+        );
+    }
+
+    if (tripsToDeactivate.length === 0) {
+        return;
+    }
+
+    const uniqueVehicleNumbers = Array.from(
+        new Set(tripsToDeactivate.map((trip) => normalizeVehicleNumber(trip.vehicle_number)).filter(Boolean))
+    );
+
+    for (const normalizedVehicleNumber of uniqueVehicleNumbers) {
+        await runQuery(
+            `
+                DELETE FROM active_trips
+                WHERE UPPER(TRIM(vehicle_number)) = ?
+            `,
+            [normalizedVehicleNumber]
+        );
+    }
+
+    tripsToDeactivate.forEach((trip) => {
+        closeTripConnections({
+            tripId: trip.id,
+            vehicleNumber: trip.vehicle_number,
+            reason: 'mobile_socket_timeout'
+        });
+        stopTripSignalSimulation(trip.id);
+    });
+
+    await broadcastAllTrips();
+
+    console.log(
+        `[MOBILE_WS_TIMEOUT_DEACTIVATED] trip_id=${Number.isFinite(tripId) && tripId > 0 ? tripId : 'unknown'} vehicle=${vehicleNumber || 'unknown'} timeout_ms=${MOBILE_SOCKET_TIMEOUT_MS}`
+    );
+}
+
+function clearMobileSocketTimeout(socket) {
+    if (socket?.meta?.mobileTimeoutHandle) {
+        clearTimeout(socket.meta.mobileTimeoutHandle);
+        socket.meta.mobileTimeoutHandle = null;
+    }
+}
+
+function scheduleMobileSocketTimeout(socket) {
+    if (!socket || socket.meta?.role !== 'mobile') {
+        return;
+    }
+
+    clearMobileSocketTimeout(socket);
+
+    socket.meta.mobileTimeoutHandle = setTimeout(() => {
+        deactivateTripOnMobileSocketTimeout(socket).catch((error) => {
+            console.error('Failed to deactivate trip on mobile socket timeout:', error.message);
+        });
+    }, MOBILE_SOCKET_TIMEOUT_MS);
+}
+
 function closeTripConnections({ tripId, vehicleNumber, reason = 'trip_deactivated' }) {
     const normalizedTripId = Number(tripId);
     const normalizedVehicleNumber = normalizeVehicleNumber(vehicleNumber);
     const socketsToClose = new Set();
+    const deactivationPayload = {
+        reason,
+        trip_id: Number.isFinite(normalizedTripId) && normalizedTripId > 0 ? normalizedTripId : null,
+        vehicle_number: normalizedVehicleNumber || null
+    };
 
     const mobileSocket = getMobileSocket({
         tripId: normalizedTripId,
@@ -102,15 +219,13 @@ function closeTripConnections({ tripId, vehicleNumber, reason = 'trip_deactivate
     });
 
     socketsToClose.forEach((socket) => {
-        sendTripDeactivatedAndClose(socket, {
-            reason,
-            trip_id: Number.isFinite(normalizedTripId) && normalizedTripId > 0 ? normalizedTripId : null,
-            vehicle_number: normalizedVehicleNumber || null
-        });
+        sendTripDeactivatedAndClose(socket, deactivationPayload);
         removeMobileSocketMappings(socket);
         visualClients.delete(socket);
         connectedClients.delete(socket);
     });
+
+    broadcastTripDeactivated(deactivationPayload);
 
     if (socketsToClose.size > 0) {
         console.log(
@@ -217,6 +332,8 @@ function initializeActiveTripsSocket(server) {
         path: '/ws/active-trips'
     });
 
+    activeTripsWss = wss;
+
     wss.on('connection', async (socket, request) => {
         connectedClients.add(socket);
 
@@ -236,12 +353,15 @@ function initializeActiveTripsSocket(server) {
 
         if (role === 'mobile') {
             registerMobileSocket(socket, socket.meta.tripId, socket.meta.vehicleNumber);
+            scheduleMobileSocketTimeout(socket);
             console.log(
                 `[MOBILE_WS_CONNECTED] ip=${remoteAddress} trip_id=${socket.meta.tripId || 'unknown'} vehicle=${socket.meta.vehicleNumber || 'unknown'}`
             );
         } else {
             visualClients.add(socket);
-            console.log(`[WS_CONNECTED] role=${role} ip=${remoteAddress}`);
+            if (role !== 'dashboard') {
+                console.log(`[WS_CONNECTED] role=${role} ip=${remoteAddress}`);
+            }
         }
 
         sendJson(socket, {
@@ -321,6 +441,7 @@ function initializeActiveTripsSocket(server) {
                 };
 
                 registerMobileSocket(socket, socket.meta.tripId, socket.meta.vehicleNumber);
+                scheduleMobileSocketTimeout(socket);
 
                 console.log(
                     `[MOBILE_LOCATION_UPDATE] trip_id=${socket.meta.tripId || 'unknown'} vehicle=${socket.meta.vehicleNumber || 'unknown'} lat=${lat} lon=${lon}`
@@ -340,7 +461,8 @@ function initializeActiveTripsSocket(server) {
                     vehicle_number: hasVehicle ? vehicle_number : null,
                     lat,
                     lon,
-                    eta_to_hospital: Number.isFinite(eta_to_hospital) ? eta_to_hospital : null,
+                    eta_to_hospital: signalPayload?.eta_to_hospital
+                        ?? (Number.isFinite(eta_to_hospital) ? eta_to_hospital : null),
                     signals: signalPayload?.signals || []
                 });
             } catch (_error) {
@@ -352,13 +474,17 @@ function initializeActiveTripsSocket(server) {
         });
 
         socket.on('close', () => {
+            clearMobileSocketTimeout(socket);
             connectedClients.delete(socket);
             visualClients.delete(socket);
             removeMobileSocketMappings(socket);
-            console.log(`[WS_DISCONNECTED] role=${socket.meta?.role || 'unknown'}`);
+            if ((socket.meta?.role || 'unknown') !== 'dashboard') {
+                console.log(`[WS_DISCONNECTED] role=${socket.meta?.role || 'unknown'}`);
+            }
         });
 
         socket.on('error', () => {
+            clearMobileSocketTimeout(socket);
             connectedClients.delete(socket);
             visualClients.delete(socket);
             removeMobileSocketMappings(socket);
@@ -368,10 +494,39 @@ function initializeActiveTripsSocket(server) {
     return wss;
 }
 
+function shutdownActiveTripsSocketServer() {
+    connectedClients.forEach((socket) => {
+        clearMobileSocketTimeout(socket);
+        removeMobileSocketMappings(socket);
+
+        try {
+            if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                socket.close(1001, 'server_shutdown');
+            }
+        } catch (_error) {
+        }
+    });
+
+    connectedClients.clear();
+    visualClients.clear();
+    mobileSocketsByTrip.clear();
+    mobileSocketsByVehicle.clear();
+
+    if (activeTripsWss) {
+        try {
+            activeTripsWss.close();
+        } catch (_error) {
+        }
+
+        activeTripsWss = null;
+    }
+}
+
 module.exports = {
     initializeActiveTripsSocket,
     broadcastAllTrips,
     broadcastLiveLocationUpdate,
     broadcastTripSignalsUpdate,
-    closeTripConnections
+    closeTripConnections,
+    shutdownActiveTripsSocketServer
 };
