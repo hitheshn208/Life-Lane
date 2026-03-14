@@ -1,10 +1,22 @@
 package com.example.testapp
 
 import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.*
 import okhttp3.*
 import org.json.JSONObject
+import org.osmdroid.views.MapView
 import java.util.concurrent.TimeUnit
+
+data class TrafficSignal(
+    val id: String,
+    val lat: Double,
+    val lon: Double,
+    val color: String,
+    val trafficLevel: String,
+    val eta: Int,
+    val distance: Int
+)
 
 class TripManager(private val vehicleNumber: String) {
     private val client = OkHttpClient.Builder()
@@ -19,6 +31,14 @@ class TripManager(private val vehicleNumber: String) {
     private var currentLon: Double = 0.0
     private var currentEta: Int = 0
     private var isTripActive = false
+    private var currentTripId: Int? = null
+
+    // Signal data state for Compose to observe
+    val signals = mutableStateListOf<TrafficSignal>()
+
+    fun setTripId(tripId: Int) {
+        this.currentTripId = tripId
+    }
 
     fun updateLocation(lat: Double, lon: Double, eta: Int) {
         currentLat = lat
@@ -38,6 +58,7 @@ class TripManager(private val vehicleNumber: String) {
         job?.cancel()
         webSocket?.close(1000, "Trip ended")
         webSocket = null
+        signals.clear()
     }
 
     private fun connect() {
@@ -53,18 +74,21 @@ class TripManager(private val vehicleNumber: String) {
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                Log.d("TripManager", "Message: $text")
-            }
-
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                webSocket.close(1000, null)
+                try {
+                    val json = JSONObject(text)
+                    if (json.optString("type") == "signal_state_update") {
+                        handleSignalUpdate(json)
+                    }
+                } catch (e: Exception) {
+                    Log.e("TripManager", "Error parsing message: ${e.message}")
+                }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e("TripManager", "Error: ${t.message}")
                 if (isTripActive) {
                     scope.launch {
-                        delay(5000) // Reconnect after 5 seconds
+                        delay(5000)
                         connect()
                     }
                 }
@@ -72,12 +96,39 @@ class TripManager(private val vehicleNumber: String) {
         })
     }
 
+    private fun handleSignalUpdate(json: JSONObject) {
+        val tripId = json.optInt("trip_id")
+        if (currentTripId != null && tripId != currentTripId) return
+
+        val signalsArray = json.optJSONArray("signals") ?: return
+        val newSignals = mutableListOf<TrafficSignal>()
+        
+        for (i in 0 until signalsArray.length()) {
+            val s = signalsArray.getJSONObject(i)
+            newSignals.add(TrafficSignal(
+                id = s.getString("id"),
+                lat = s.getDouble("lat"),
+                lon = s.getDouble("lon"),
+                color = s.optString("color", "YELLOW"),
+                trafficLevel = s.optString("traffic_level", "UNKNOWN"),
+                eta = s.optInt("eta_seconds", 0),
+                distance = s.optInt("distance_to_signal_meters", 0)
+            ))
+        }
+
+        // Update state on Main thread for Compose
+        CoroutineScope(Dispatchers.Main).launch {
+            signals.clear()
+            signals.addAll(newSignals)
+        }
+    }
+
     private fun startUpdates() {
         job?.cancel()
         job = scope.launch {
             while (isActive && isTripActive) {
                 sendLocationUpdate()
-                delay(1000) // Changed from 3000 to 1000 (1 second)
+                delay(1000)
             }
         }
     }
@@ -93,11 +144,9 @@ class TripManager(private val vehicleNumber: String) {
             put("eta_to_hospital", currentEta)
         }
         
-        val sent = webSocket?.send(json.toString()) ?: false
-        if (sent) {
-            Log.d("TripManager", "Sent update: $json")
-        } else {
-            Log.w("TripManager", "Failed to send update (WS might be down)")
-        }
+        webSocket?.send(json.toString())
     }
+
+    // Deprecated methods replaced by state management
+    fun setMapView(view: MapView) {}
 }

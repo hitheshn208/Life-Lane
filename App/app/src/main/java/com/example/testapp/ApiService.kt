@@ -24,7 +24,8 @@ data class MyAmbulancesResult(val isSuccess: Boolean, val ambulances: List<Ambul
 data class TripResult(val isSuccess: Boolean, val message: String, val tripId: Int? = null, val statusCode: Int = 0)
 
 object ApiService {
-    private const val TIMEOUT = 5000
+    // INCREASED TIMEOUT to 15 seconds to prevent network errors during slow connections
+    private const val TIMEOUT = 15000
 
     suspend fun verifyToken(token: String): AuthResult = withContext(Dispatchers.IO) {
         try {
