@@ -113,6 +113,13 @@ function initializeActiveTripsSocket(server) {
         const vehicleNumberRaw = requestUrl.searchParams.get('vehicle_number') || requestUrl.searchParams.get('vehicleNumber');
         const vehicleNumber = vehicleNumberRaw ? String(vehicleNumberRaw).trim().toUpperCase() : null;
 
+        if (role === 'mobile') {
+            const remoteAddress = request.socket?.remoteAddress || 'unknown';
+            console.log(
+                `[MOBILE_WS_CONNECTED] ip=${remoteAddress} trip_id=${Number.isFinite(tripId) && tripId > 0 ? tripId : 'unknown'} vehicle=${vehicleNumber || 'unknown'}`
+            );
+        }
+
         sendJson(socket, {
             type: 'connection_ack',
             message: 'Active trips websocket connected',

@@ -64,21 +64,25 @@ app.use('/api/trips', activeTripsRoutes);
 initializeActiveTripsSocket(server);
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', async () => {
-    try {
-        const trips = await getAllActiveTrips();
-        await bootstrapTripSignalSimulations(trips);
-    } catch (error) {
-        console.error('Failed to bootstrap trip signal simulations:', error.message);
-    }
+// server.listen(PORT, '0.0.0.0', async () => {
+//     try {
+//         const trips = await getAllActiveTrips();
+//         await bootstrapTripSignalSimulations(trips);
+//     } catch (error) {
+//         console.error('Failed to bootstrap trip signal simulations:', error.message);
+//     }
 
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+//     console.log('Server running on port', PORT);
+// });
 
-process.on('SIGTERM', () => {
-    server.close(() => process.exit(0));
-});
+// process.on('SIGTERM', () => {
+//     server.close(() => process.exit(0));
+// });
 
-process.on('SIGINT', () => {
-    server.close(() => process.exit(0));
-});
+// process.on('SIGINT', () => {
+//     server.close(() => process.exit(0));
+// });
+
+app.listen(3000, '0.0.0.0',()=>{
+    console.log("http://localhost:3000");
+})

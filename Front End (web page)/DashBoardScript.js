@@ -1,5 +1,20 @@
-const API_BASE_URL = "http://localhost:3000"
-const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws")
+const queryParams = new URLSearchParams(window.location.search)
+const queryApiBase = queryParams.get("api")
+const storedApiBase = window.localStorage.getItem("API_BASE_URL")
+
+const API_BASE_URL = queryApiBase
+	|| storedApiBase
+	|| (window.location.protocol.startsWith("http")
+		? `${window.location.protocol}//${window.location.hostname}:3000`
+		: "http://localhost:3000")
+
+if (queryApiBase) {
+	window.localStorage.setItem("API_BASE_URL", queryApiBase)
+}
+
+const apiUrl = new URL(API_BASE_URL)
+const wsProtocol = apiUrl.protocol === "https:" ? "wss:" : "ws:"
+const WS_BASE_URL = `${wsProtocol}//${apiUrl.host}`
 
 const container = document.getElementById("ambulanceContainer")
 const emptyState = document.getElementById("emptyState")
@@ -9,6 +24,7 @@ const connectionStatus = document.getElementById("connectionStatus")
 let activeTrips = []
 let activeFilters = []
 let socket = null
+let reconnectTimer = null
 const DASHBOARD_SIGNAL_ROUTE_MAX_METERS = 6
 
 function setConnectionStatus(text, state) {
@@ -248,12 +264,46 @@ function mergeTripPayload(payload) {
 	const index = findTripIndex(payload)
 
 	if (index < 0) {
+		const fallbackTripId = payload.tripId ?? payload.trip_id ?? Date.now()
+		const fallbackTrip = {
+			id: Number.isFinite(Number(fallbackTripId)) ? Number(fallbackTripId) : Date.now(),
+			driver_id: payload.driver_id ?? null,
+			vehicle_number: payload.vehicle_number || "UNKNOWN",
+			ambulance_name: payload.ambulance_name || "Ambulance",
+			ambulance_type: payload.ambulance_type || "—",
+			registered_hospital: payload.registered_hospital || "—",
+			severity: payload.severity || "STABLE",
+			start_time: payload.start_time || new Date().toISOString(),
+			patient_lat: payload.patient_lat ?? null,
+			patient_lon: payload.patient_lon ?? null,
+			hospital_lat: payload.hospital_lat ?? null,
+			hospital_lon: payload.hospital_lon ?? null,
+			live_lat: payload.ambulanceLat ?? payload.ambulance_lat ?? payload.lat ?? null,
+			live_lon: payload.ambulanceLon ?? payload.ambulance_lon ?? payload.lon ?? null,
+			eta_to_hospital: payload.eta_to_hospital ?? null,
+			live_timestamp: payload.updated_at ?? payload.timestamp ?? null,
+			route: payload.route || null,
+			signals: Array.isArray(payload.signals) ? payload.signals : []
+		}
+
+		activeTrips = [fallbackTrip, ...activeTrips]
 		return
 	}
 
 	const existing = activeTrips[index]
 	activeTrips[index] = {
 		...existing,
+		driver_id: payload.driver_id ?? existing.driver_id,
+		vehicle_number: payload.vehicle_number ?? existing.vehicle_number,
+		ambulance_name: payload.ambulance_name ?? existing.ambulance_name,
+		ambulance_type: payload.ambulance_type ?? existing.ambulance_type,
+		registered_hospital: payload.registered_hospital ?? existing.registered_hospital,
+		severity: payload.severity ?? existing.severity,
+		start_time: payload.start_time ?? existing.start_time,
+		patient_lat: payload.patient_lat ?? existing.patient_lat,
+		patient_lon: payload.patient_lon ?? existing.patient_lon,
+		hospital_lat: payload.hospital_lat ?? existing.hospital_lat,
+		hospital_lon: payload.hospital_lon ?? existing.hospital_lon,
 		live_lat: payload.ambulanceLat ?? payload.ambulance_lat ?? payload.lat ?? existing.live_lat,
 		live_lon: payload.ambulanceLon ?? payload.ambulance_lon ?? payload.lon ?? existing.live_lon,
 		eta_to_hospital: payload.eta_to_hospital ?? existing.eta_to_hospital,
@@ -264,10 +314,18 @@ function mergeTripPayload(payload) {
 }
 
 function connectActiveTripsSocket() {
+	if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+		return
+	}
+
 	setConnectionStatus("Connecting...", "connecting")
 	socket = new WebSocket(`${WS_BASE_URL}/ws/active-trips?role=dashboard`)
 
 	socket.addEventListener("open", () => {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer)
+			reconnectTimer = null
+		}
 		setConnectionStatus("Live connected", "connected")
 	})
 
@@ -297,7 +355,10 @@ function connectActiveTripsSocket() {
 	})
 
 	socket.addEventListener("close", () => {
-		setConnectionStatus("Disconnected", "error")
+		setConnectionStatus("Disconnected (retrying)", "error")
+		reconnectTimer = setTimeout(() => {
+			connectActiveTripsSocket()
+		}, 2000)
 	})
 
 	socket.addEventListener("error", () => {

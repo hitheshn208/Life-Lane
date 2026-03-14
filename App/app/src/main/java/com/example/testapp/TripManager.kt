@@ -65,7 +65,7 @@ class TripManager(private val vehicleNumber: String) {
         if (!isTripActive) return
         
         val request = Request.Builder()
-            .url(Config.WS_URL)
+            .url(Config.getMobileWsUrl(vehicleNumber, currentTripId))
             .build()
         
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
