@@ -1,7 +1,14 @@
+const API_BASE_URL = "http://localhost:3000"
+const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws")
+
 let map
-let ambulanceMarker
+let patientMarker
 let hospitalMarker
-let routeLayer
+let ambulanceLiveMarker
+let patientToHospitalLayer
+let tripSocket
+let currentTripId = null
+let currentVehicleNumber = null
 
 function getSelectedAmbulanceData(){
 const raw = sessionStorage.getItem("selectedAmbulanceData")
@@ -17,150 +24,183 @@ return null
 }
 }
 
-async function getRouteGeoJsonFromOSRM(sourcePoint,destinationPoint){
+function setLoader(visible,text){
+const loader = document.getElementById("routeLoader")
+const loaderText = document.getElementById("routeLoaderText")
 
+if(loader){
+loader.classList.toggle("hidden", !visible)
+}
+
+if(loaderText && text){
+loaderText.textContent = text
+}
+}
+
+async function getRouteGeoJsonFromOSRM(sourcePoint,destinationPoint){
 const osrmUrl =
 `https://router.project-osrm.org/route/v1/driving/${sourcePoint.lng},${sourcePoint.lat};${destinationPoint.lng},${destinationPoint.lat}?overview=full&geometries=geojson`
 
 const response = await fetch(osrmUrl)
+
+if(!response.ok){
+throw new Error(`OSRM request failed with ${response.status}`)
+}
+
 const payload = await response.json()
+
+if(!payload.routes || !payload.routes[0] || !payload.routes[0].geometry){
+throw new Error("OSRM route geometry missing")
+}
 
 return payload.routes[0].geometry
 }
 
-async function initMap(data){
+async function fetchActiveTripDetails(tripId){
+const response = await fetch(`${API_BASE_URL}/api/trips/active/public/${tripId}`)
 
-const startPoint = data?.source || { lat:12.9716, lng:77.5946 }
-const destinationPoint = data?.destination || { lat:12.9616, lng:77.5846 }
+if(!response.ok){
+throw new Error(`Failed to fetch active trip ${tripId}`)
+}
 
-map = L.map("map").setView([startPoint.lat,startPoint.lng],13)
+const payload = await response.json()
+return payload.trip
+}
+
+function updateSidebar(trip){
+document.getElementById("hospital").textContent = trip.registered_hospital || "—"
+document.getElementById("eta").textContent = `${trip.eta_to_hospital ?? "--"} min`
+document.getElementById("priority").textContent = trip.severity || "—"
+document.getElementById("etaMinutes").textContent = String(trip.eta_to_hospital ?? "--")
+document.getElementById("remaining").textContent = `${trip.eta_to_hospital ?? "--"} min remaining`
+
+const signalPath = document.getElementById("signalPath")
+if(signalPath){
+signalPath.innerHTML = ""
+}
+
+function updateEtaOnSidebar(etaToHospital){
+if(etaToHospital === null || etaToHospital === undefined){
+return
+}
+
+document.getElementById("eta").textContent = `${etaToHospital} min`
+document.getElementById("etaMinutes").textContent = String(etaToHospital)
+document.getElementById("remaining").textContent = `${etaToHospital} min remaining`
+}
+
+function upsertAmbulanceLiveMarker(lat, lon){
+if(!map){
+return
+}
+
+const safeLat = Number(lat)
+const safeLon = Number(lon)
+
+if(!Number.isFinite(safeLat) || !Number.isFinite(safeLon)){
+return
+}
+
+if(!ambulanceLiveMarker){
+ambulanceLiveMarker = L.marker([safeLat, safeLon]).addTo(map).bindPopup("🚑 Live Ambulance")
+return
+}
+
+ambulanceLiveMarker.setLatLng([safeLat, safeLon])
+}
+
+function connectTripLiveSocket(){
+tripSocket = new WebSocket(`${WS_BASE_URL}/ws/active-trips?role=webpage2`)
+
+tripSocket.addEventListener("message", (event) => {
+try{
+const payload = JSON.parse(event.data)
+
+if(payload.type !== "live_location_update"){
+return
+}
+
+const matchedByTripId = currentTripId && payload.trip_id && Number(currentTripId) === Number(payload.trip_id)
+const matchedByVehicle = currentVehicleNumber && payload.vehicle_number && String(currentVehicleNumber).toUpperCase() === String(payload.vehicle_number).toUpperCase()
+
+if(!matchedByTripId && !matchedByVehicle){
+return
+}
+
+upsertAmbulanceLiveMarker(payload.lat, payload.lon)
+updateEtaOnSidebar(payload.eta_to_hospital)
+}catch(error){
+console.error("Invalid websocket payload", error)
+}
+})
+}
+}
+
+async function initMap(trip){
+const patientPoint = {
+lat: Number(trip.patient_lat),
+lng: Number(trip.patient_lon)
+}
+const hospitalPoint = {
+lat: Number(trip.hospital_lat),
+lng: Number(trip.hospital_lon)
+}
+
+map = L.map("map").setView([patientPoint.lat,patientPoint.lng],13)
 
 L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 {maxZoom:19}
 ).addTo(map)
 
-ambulanceMarker = L.marker([startPoint.lat,startPoint.lng]).addTo(map)
+patientMarker = L.marker([patientPoint.lat,patientPoint.lng]).addTo(map).bindPopup("🧍 Patient")
+hospitalMarker = L.marker([hospitalPoint.lat,hospitalPoint.lng]).addTo(map).bindPopup("🏥 Hospital")
 
-hospitalMarker = L.marker([destinationPoint.lat,destinationPoint.lng]).addTo(map)
-
-hospitalMarker.bindPopup("🏥 Hospital")
-
-const loader = document.getElementById("routeLoader")
-const loaderText = document.getElementById("routeLoaderText")
-
-if(loader) loader.classList.remove("hidden")
-if(loaderText) loaderText.textContent = "Loading route..."
+setLoader(true, "Loading route...")
 
 try{
+const patientToHospitalGeo = await getRouteGeoJsonFromOSRM(patientPoint, hospitalPoint)
 
-const routeGeo = await getRouteGeoJsonFromOSRM(startPoint,destinationPoint)
-
-routeLayer = L.geoJSON(routeGeo,{
+patientToHospitalLayer = L.geoJSON(patientToHospitalGeo,{
 style:{
-color:"#2563eb",
+color:"#dc2626",
 weight:5
 }
 }).addTo(map)
 
-map.fitBounds(routeLayer.getBounds().pad(0.2))
-
+const boundsLayer = L.featureGroup([patientToHospitalLayer])
+map.fitBounds(boundsLayer.getBounds().pad(0.2))
 }catch(error){
-
 console.error("Failed to load route:", error)
-
+setLoader(true, "Failed to load route")
+setTimeout(() => setLoader(false), 1200)
+return
 }
 
-if(loader) loader.classList.add("hidden")
-
-/* sidebar data */
-
-if(data){
-
-document.getElementById("hospital").textContent =
-data.destinationHospital || "—"
-
-document.getElementById("eta").textContent =
-data.eta || "—"
-
-document.getElementById("priority").textContent =
-data.priority || "—"
-
-document.getElementById("etaMinutes").textContent =
-data.remaining || "--"
-
-document.getElementById("remaining").textContent =
-`${data.remaining || "--"} min remaining`
-
-/* signals */
-
-const container = document.getElementById("signalPath")
-
-container.innerHTML = ""
-
-if(Array.isArray(data.signals)){
-
-data.signals.forEach(signal=>{
-
-const el = document.createElement("div")
-el.className="signal"
-
-const red = document.createElement("div")
-const yellow = document.createElement("div")
-const green = document.createElement("div")
-
-red.className = "light red"
-yellow.className = "light yellow"
-green.className = "light green"
-
-/* turn OFF all lights first */
-
-red.style.opacity = "0.2"
-yellow.style.opacity = "0.2"
-green.style.opacity = "0.2"
-
-/* activate correct one */
-
-if(signal.status === "red"){
-red.style.opacity = "1"
+setLoader(false)
+updateSidebar(trip)
 }
 
-if(signal.status === "yellow"){
-yellow.style.opacity = "1"
+async function initializePage(){
+const selected = getSelectedAmbulanceData()
+const selectedTripId = Number(selected?.tripId)
+
+if(!Number.isInteger(selectedTripId) || selectedTripId <= 0){
+alert("No trip selected from dashboard")
+return
 }
 
-if(signal.status === "green"){
-green.style.opacity = "1"
+try{
+setLoader(true, "Fetching active trip details...")
+const trip = await fetchActiveTripDetails(selectedTripId)
+currentTripId = trip.id
+currentVehicleNumber = trip.vehicle_number
+await initMap(trip)
+connectTripLiveSocket()
+}catch(error){
+console.error(error)
+setLoader(true, "Unable to load selected active trip")
+}
 }
 
-el.appendChild(red)
-el.appendChild(yellow)
-el.appendChild(green)
-
-container.appendChild(el)
-
-})
-
-}
-
-}
-
-}
-
-const selectedAmbulanceData = {
-plate:"KA19AB1023",
-driver:"John D Smith",
-status:"critical",
-destinationHospital:"St Martha's Hospital",
-eta:"14:35",
-priority:"HIGH",
-signals:[
-{status:"red"},
-{status:"green"},
-{status:"yellow"},
-{status:"green"}
-],
-source:{lat:12.9716,lng:77.5946},
-destination:{lat:12.9616,lng:77.5846}
-}
-initMap(selectedAmbulanceData)
+initializePage()

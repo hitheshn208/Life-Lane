@@ -170,4 +170,56 @@ router.get('/active', verifyAuthToken, async (req, res) => {
     }
 });
 
+router.get('/active/public/:tripId', async (req, res) => {
+    const tripId = Number(req.params.tripId);
+
+    if (!Number.isInteger(tripId) || tripId <= 0) {
+        return res.status(400).json({
+            message: 'tripId must be a positive integer'
+        });
+    }
+
+    try {
+        const trip = await getQuery(
+            `
+                SELECT
+                    at.id,
+                    at.driver_id,
+                    at.vehicle_number,
+                    at.patient_lat,
+                    at.patient_lon,
+                    at.hospital_lat,
+                    at.hospital_lon,
+                    at.severity,
+                    at.eta_to_hospital,
+                    at.start_time,
+                    ga.ambulance_name,
+                    ga.ambulance_type,
+                    ga.registered_hospital
+                FROM active_trips AS at
+                INNER JOIN govt_ambulances AS ga
+                    ON ga.vehicle_number = at.vehicle_number
+                WHERE at.id = ?
+            `,
+            [tripId]
+        );
+
+        if (!trip) {
+            return res.status(404).json({
+                message: 'Active trip not found',
+                trip_id: tripId
+            });
+        }
+
+        return res.json({
+            trip
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Failed to fetch active trip details',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
