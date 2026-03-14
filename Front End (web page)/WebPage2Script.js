@@ -1,5 +1,20 @@
-const API_BASE_URL = "http://localhost:3000"
-const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws")
+const queryParams = new URLSearchParams(window.location.search)
+const queryApiBase = queryParams.get("api")
+const storedApiBase = window.localStorage.getItem("API_BASE_URL")
+
+const API_BASE_URL = queryApiBase
+	|| storedApiBase
+	|| (window.location.protocol.startsWith("http")
+		? `${window.location.protocol}//${window.location.hostname}:3000`
+		: "http://localhost:3000")
+
+if (queryApiBase) {
+	window.localStorage.setItem("API_BASE_URL", queryApiBase)
+}
+
+const apiUrl = new URL(API_BASE_URL)
+const wsProtocol = apiUrl.protocol === "https:" ? "wss:" : "ws:"
+const WS_BASE_URL = `${wsProtocol}//${apiUrl.host}`
 
 let map
 let patientMarker
@@ -11,6 +26,8 @@ let currentTripId = null
 let currentVehicleNumber = null
 let signalMarkers = new Map()
 let currentSignals = []
+let reconnectTimer = null
+let shouldReconnectSocket = true
 
 function getSelectedAmbulanceData(){
 const raw = sessionStorage.getItem("selectedAmbulanceData")
@@ -239,11 +256,33 @@ ambulanceLiveMarker.setLatLng([safeLat, safeLon])
 }
 
 function connectTripLiveSocket(){
-tripSocket = new WebSocket(`${WS_BASE_URL}/ws/active-trips?role=webpage2`)
+	if(tripSocket && (tripSocket.readyState === WebSocket.OPEN || tripSocket.readyState === WebSocket.CONNECTING)){
+		return
+	}
+
+	const tripQuery = currentTripId ? `&trip_id=${encodeURIComponent(String(currentTripId))}` : ""
+	const vehicleQuery = currentVehicleNumber ? `&vehicle_number=${encodeURIComponent(String(currentVehicleNumber))}` : ""
+	tripSocket = new WebSocket(`${WS_BASE_URL}/ws/active-trips?role=webpage2${tripQuery}${vehicleQuery}`)
+
+	tripSocket.addEventListener("open", () => {
+		if(reconnectTimer){
+			clearTimeout(reconnectTimer)
+			reconnectTimer = null
+		}
+	})
 
 tripSocket.addEventListener("message", (event) => {
 try{
 const payload = JSON.parse(event.data)
+
+if(payload.type === "trip_deactivated"){
+	shouldReconnectSocket = false
+	if(reconnectTimer){
+		clearTimeout(reconnectTimer)
+		reconnectTimer = null
+	}
+	return
+}
 
 const matchedByTripId = currentTripId && payload.trip_id && Number(currentTripId) === Number(payload.trip_id)
 const matchedByVehicle = currentVehicleNumber && payload.vehicle_number && String(currentVehicleNumber).toUpperCase() === String(payload.vehicle_number).toUpperCase()
@@ -271,6 +310,26 @@ renderSignals(payload.signals || [])
 console.error("Invalid websocket payload", error)
 }
 })
+
+	tripSocket.addEventListener("close", () => {
+		if(!shouldReconnectSocket){
+			return
+		}
+		reconnectTimer = setTimeout(() => {
+			connectTripLiveSocket()
+		}, 2000)
+	})
+
+	tripSocket.addEventListener("error", () => {
+		if(!shouldReconnectSocket){
+			return
+		}
+		if(!reconnectTimer){
+			reconnectTimer = setTimeout(() => {
+				connectTripLiveSocket()
+			}, 2000)
+		}
+	})
 }
 
 async function initMap(trip){
@@ -341,6 +400,7 @@ setLoader(true, "Fetching active trip details...")
 const trip = await fetchActiveTripDetails(selectedTripId)
 currentTripId = trip.id
 currentVehicleNumber = trip.vehicle_number
+	shouldReconnectSocket = true
 await initMap(trip)
 }catch(error){
 console.error(error)

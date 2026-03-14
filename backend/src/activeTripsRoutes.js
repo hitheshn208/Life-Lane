@@ -3,7 +3,7 @@ const router = express.Router();
 const { allQuery, getQuery, runQuery } = require('./database');
 const { verifyAuthToken } = require('./authToken');
 const { getActiveTripsForDriver } = require('./activeTripsService');
-const { broadcastAllTrips } = require('./activeTripsRealtime');
+const { broadcastAllTrips, closeTripConnections } = require('./activeTripsRealtime');
 const {
     ensureTripSignalSimulation,
     attachRuntimeDataToTrip,
@@ -295,6 +295,11 @@ router.post('/active/deactivate', verifyAuthToken, async (req, res) => {
         );
 
         tripsToDeactivate.forEach((trip) => {
+            closeTripConnections({
+                tripId: trip.id,
+                vehicleNumber: trip.vehicle_number,
+                reason: 'trip_removed_from_db'
+            });
             stopTripSignalSimulation(trip.id);
         });
 
