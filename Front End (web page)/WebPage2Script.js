@@ -78,6 +78,7 @@ const signalPath = document.getElementById("signalPath")
 if(signalPath){
 signalPath.innerHTML = ""
 }
+}
 
 function updateEtaOnSidebar(etaToHospital){
 if(etaToHospital === null || etaToHospital === undefined){
@@ -133,7 +134,6 @@ updateEtaOnSidebar(payload.eta_to_hospital)
 console.error("Invalid websocket payload", error)
 }
 })
-}
 }
 
 async function initMap(trip){
@@ -196,10 +196,16 @@ const trip = await fetchActiveTripDetails(selectedTripId)
 currentTripId = trip.id
 currentVehicleNumber = trip.vehicle_number
 await initMap(trip)
-connectTripLiveSocket()
 }catch(error){
 console.error(error)
 setLoader(true, "Unable to load selected active trip")
+return
+}
+
+try{
+connectTripLiveSocket()
+}catch(error){
+console.warn("Live websocket connection could not be started", error)
 }
 }
 
