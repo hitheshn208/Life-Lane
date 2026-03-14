@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -50,72 +51,102 @@ fun VehicleSetupScreen(userName: String, authToken: String, onLogout: () -> Unit
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = lightBackground
-    ) { paddingValues ->
+    ) { _ -> // Explicitly ignoring paddingValues to allow the header to bleed into status bar
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Header Section
+            // Updated Header Section: Extended to top edge
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                     .background(
-                        darkSurface,
-                        RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary, 
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
                     )
-                    .padding(horizontal = 24.dp, vertical = 40.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars) // Extends background to top
+                    .padding(horizontal = 24.dp, vertical = 32.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(64.dp)
-                                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                .size(52.dp)
+                                .border(2.dp, Color.White.copy(alpha = 0.4f), CircleShape)
                                 .padding(2.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.1f)),
+                                .background(Color.White.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Person,
                                 contentDescription = "Profile",
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(28.dp),
                                 tint = Color.White
                             )
                         }
                         
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
                         
                         Column {
                             Text(
                                 text = "Driver Portal",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f)
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.7f),
+                                letterSpacing = 0.5.sp
                             )
                             Text(
                                 text = userName,
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                ),
+                                color = Color.White,
+                                maxLines = 1
                             )
                         }
                     }
 
-                    // Logout Button moved here
-                    ExtendedFloatingActionButton(
+                    // Integrated Logout Button
+                    Surface(
                         onClick = onLogout,
-                        containerColor = Color.White.copy(alpha = 0.1f),
-                        contentColor = Color.White,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.size(width = 110.dp, height = 40.dp),
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp),
-                        icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        text = { Text("Logout", fontSize = 13.sp) }
-                    )
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.height(42.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ExitToApp, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(18.dp),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Logout", 
+                                fontSize = 14.sp, 
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
 
@@ -125,7 +156,7 @@ fun VehicleSetupScreen(userName: String, authToken: String, onLogout: () -> Unit
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Vehicle Assignment Card
                 Card(
@@ -229,7 +260,7 @@ fun VehicleSetupScreen(userName: String, authToken: String, onLogout: () -> Unit
                     }
                 }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(32.dp))
                 
                 // My Ambulances Section
                 Row(

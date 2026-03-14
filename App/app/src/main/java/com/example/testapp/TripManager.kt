@@ -77,7 +77,7 @@ class TripManager(private val vehicleNumber: String) {
         job = scope.launch {
             while (isActive && isTripActive) {
                 sendLocationUpdate()
-                delay(3000)
+                delay(1000) // Changed from 3000 to 1000 (1 second)
             }
         }
     }

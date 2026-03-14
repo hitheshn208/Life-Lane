@@ -9,10 +9,13 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Looper
+import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,7 +38,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,12 +79,26 @@ import java.util.Locale
 
 @SuppressLint("MissingPermission")
 @Composable
-fun DashboardScreen(vehicleId: String = "", authToken: String = "", onBackToSetup: () -> Unit = {}) {
+fun DashboardScreen(vehicleId: String = "", authToken: String = "", driverId: String = "", onBackToSetup: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     val sharedPref = remember { context.getSharedPreferences("testapp_prefs", Context.MODE_PRIVATE) }
     
     val tripManager = remember(vehicleId) { TripManager(vehicleId) }
+
+    // State to track the height of the bottom panel
+    var bottomPanelHeight by remember { mutableStateOf(0.dp) }
+    val animatedBottomPadding by animateDpAsState(targetValue = bottomPanelHeight, label = "fab_padding")
+
+    // Keep screen on when Dashboard is visible
+    DisposableEffect(Unit) {
+        val window = (context as? ComponentActivity)?.window
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     LaunchedEffect(Unit) {
         Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
@@ -337,33 +356,22 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onBackToSetu
 
         if (!isMapSelectionMode) {
             // Header Section
-            SmallFloatingTopBar(onBack = onBackToSetup)
+            SmallFloatingTopBar(onBack = {
+                scope.launch {
+                    // Send deactivation request to server when Back is clicked
+                    ApiService.deactivateTrip(authToken, driverId, vehicleId)
+                    onBackToSetup()
+                }
+            })
 
-            // Zoom Buttons & MyLocation (Floating)
+            // Dynamic Action Buttons: Positioned relative to bottom panel height
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = if (isTripStarted) 180.dp else 300.dp, end = 16.dp),
+                    .padding(bottom = animatedBottomPadding + 80.dp, end = 16.dp), // Increased clearance to 80.dp
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FloatingActionButton(
-                    onClick = { mapView.controller.zoomIn() },
-                    containerColor = Color.White,
-                    contentColor = Color.Black,
-                    modifier = Modifier.size(44.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Zoom In")
-                }
-                FloatingActionButton(
-                    onClick = { mapView.controller.zoomOut() },
-                    containerColor = Color.White,
-                    contentColor = Color.Black,
-                    modifier = Modifier.size(44.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Zoom Out")
-                }
+                // MyLocation button placed ABOVE Zoom buttons
                 FloatingActionButton(
                     onClick = {
                         mapView.controller.animateTo(ambulanceLocation)
@@ -376,32 +384,50 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onBackToSetu
                 ) {
                     Icon(Icons.Default.MyLocation, contentDescription = "Center Map")
                 }
+
+                FloatingActionButton(
+                    onClick = { mapView.controller.zoomIn() },
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Zoom In")
+                }
+                
+                FloatingActionButton(
+                    onClick = { mapView.controller.zoomOut() },
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = "Zoom Out")
+                }
             }
 
-            // Bottom Panel
-            AnimatedContent(
-                targetState = isTripStarted,
-                transitionSpec = {
-                    slideInVertically(initialOffsetY = { it }) + fadeIn() togetherWith
-                    slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                },
+            // Bottom Panel with Navigation Bar Insets
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth(),
-                label = "BottomPanel"
-            ) { tripStarted ->
-                Box(modifier = Modifier.padding(16.dp)) {
-                    ControlPanel(
-                        isTripStarted = tripStarted,
-                        patientLocation = patientLocation,
-                        hospitalLocation = hospitalLocation,
-                        distance = distance,
-                        eta = eta,
-                        onSearchPatient = { searchType = "patient"; showSearchOverlay = true },
-                        onSearchHospital = { searchType = "hospital"; showSearchOverlay = true },
-                        onStartTrip = { showPatientDialog = true }
-                    )
-                }
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars) // Fix system nav overlap
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 64.dp) // Lifted bottom panel further
+                    .onGloballyPositioned { coordinates ->
+                        // Measure height to dynamically push FABs up
+                        bottomPanelHeight = with(density) { coordinates.size.height.toDp() }
+                    }
+            ) {
+                ControlPanel(
+                    isTripStarted = isTripStarted,
+                    patientLocation = patientLocation,
+                    hospitalLocation = hospitalLocation,
+                    distance = distance,
+                    eta = eta,
+                    onSearchPatient = { searchType = "patient"; showSearchOverlay = true },
+                    onSearchHospital = { searchType = "hospital"; showSearchOverlay = true },
+                    onStartTrip = { showPatientDialog = true }
+                )
             }
         }
 
@@ -409,6 +435,8 @@ fun DashboardScreen(vehicleId: String = "", authToken: String = "", onBackToSetu
             LocationSearchOverlay(
                 type = searchType,
                 sharedPref = sharedPref,
+                patientLoc = patientLocation,
+                ambulanceLoc = ambulanceLocation,
                 onLocationSelected = { point, name ->
                     if (searchType == "patient") {
                         mapView.controller.setCenter(point)
@@ -512,180 +540,147 @@ fun levenshteinDistance(s1: String, s2: String): Int {
 fun LocationSearchOverlay(
     type: String,
     sharedPref: android.content.SharedPreferences,
+    patientLoc: GeoPoint?,
+    ambulanceLoc: GeoPoint,
     onLocationSelected: (GeoPoint, String) -> Unit,
     onSelectOnMap: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf<List<Pair<String, GeoPoint>>>(emptyList()) }
+    var searchResults by remember { mutableStateOf<List<Triple<String, GeoPoint, String>>>(emptyList()) }
+    var nearbyHospitals by remember { mutableStateOf<List<Triple<String, GeoPoint, String>>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
+    var isFetchingNearby by remember { mutableStateOf(false) }
     
-    val biasBounds = "77.3,12.7,77.9,13.2" 
-    val bangaloreBounds = "77.3,12.7,77.9,13.2"
-    val localPlaces = remember {
+    val centerLoc = patientLoc ?: ambulanceLoc
+    val biasBounds = remember(centerLoc) {
+        val lat = centerLoc.latitude
+        val lon = centerLoc.longitude
+        "${lon - 0.15},${lat - 0.15},${lon + 0.15},${lat + 0.15}"
+    }
+
+    val bangaloreAreas = remember {
         listOf(
-            "Majestic (KSR Bengaluru Station)" to GeoPoint(12.9733, 77.5736),
+            "Majestic" to GeoPoint(12.9733, 77.5736),
             "Mathikere" to GeoPoint(13.0324, 77.5591),
             "Madavara" to GeoPoint(13.0524, 77.4721),
+            "Peenya" to GeoPoint(13.0285, 77.5197),
+            "Palace Grounds" to GeoPoint(13.0035, 77.5891),
             "Indiranagar" to GeoPoint(12.9719, 77.6412),
             "Koramangala" to GeoPoint(12.9352, 77.6245),
             "Jayanagar" to GeoPoint(12.9250, 77.5938),
             "Whitefield" to GeoPoint(12.9698, 77.7500),
             "Electronic City" to GeoPoint(12.8452, 77.6635),
+            "Marathahalli" to GeoPoint(12.9569, 77.7011),
             "Hebbal" to GeoPoint(13.0354, 77.5988),
-            "Yeshwanthpur" to GeoPoint(13.0235, 77.5566),
             "Malleshwaram" to GeoPoint(12.9917, 77.5712),
-            "MG Road" to GeoPoint(12.9733, 77.6117),
-            "Shivajinagar" to GeoPoint(12.9857, 77.5971),
-            "KR Market" to GeoPoint(12.9657, 77.5753),
             "Banashankari" to GeoPoint(12.9254, 77.5468),
-            "BTM Layout" to GeoPoint(12.9166, 77.6101),
-            "HSR Layout" to GeoPoint(12.9121, 77.6446),
-            "Yelahanka" to GeoPoint(13.1007, 77.5963),
             "RR Nagar" to GeoPoint(12.9226, 77.5174),
-            "Vidyaranyapura" to GeoPoint(13.0763, 77.5568)
+            "Yelahanka" to GeoPoint(13.1007, 77.5963)
         )
     }
 
-    val localHospitals = remember {
-        listOf(
-            "Manipal Hospital, Old Airport Road" to GeoPoint(12.9592, 77.6444),
-            "Apollo Hospital, Bannerghatta" to GeoPoint(12.8961, 77.5985),
-            "Fortis Hospital, Cunningham Road" to GeoPoint(12.9892, 77.5933),
-            "Victoria Hospital, City Market" to GeoPoint(12.9642, 77.5746),
-            "Narayana Health, Electronic City" to GeoPoint(12.8252, 77.6800),
-            "St. John's Medical College Hospital" to GeoPoint(12.9322, 77.6194),
-            "Columbia Asia, Hebbal" to GeoPoint(13.0354, 77.5971),
-            "Aster CMI Hospital, Sahakara Nagar" to GeoPoint(13.0538, 77.5919),
-            "Sagar Hospitals, Jayanagar" to GeoPoint(12.9287, 77.5911),
-            "MS Ramaiah Memorial Hospital" to GeoPoint(13.0322, 77.5647)
-        )
+    LaunchedEffect(centerLoc, type) {
+        if (type == "hospital") {
+            isFetchingNearby = true
+            withContext(Dispatchers.IO) {
+                try {
+                    val overpassQuery = """
+                        [out:json][timeout:25];
+                        (
+                          node["amenity"="hospital"](around:5000,${centerLoc.latitude},${centerLoc.longitude});
+                          way["amenity"="hospital"](around:5000,${centerLoc.latitude},${centerLoc.longitude});
+                          relation["amenity"="hospital"](around:5000,${centerLoc.latitude},${centerLoc.longitude});
+                        );
+                        out center;
+                    """.trimIndent()
+                    
+                    val url = URL("https://overpass-api.de/api/interpreter?data=" + URLEncoder.encode(overpassQuery, "UTF-8"))
+                    val response = url.openConnection().apply { setRequestProperty("User-Agent", "AmbulanceApp/1.0") }.inputStream.bufferedReader().use { it.readText() }
+                    val elements = JSONObject(response).getJSONArray("elements")
+                    val results = mutableListOf<Triple<String, GeoPoint, String>>()
+                    
+                    for (i in 0 until elements.length()) {
+                        val el = elements.getJSONObject(i)
+                        val lat = if (el.has("lat")) el.getDouble("lat") else el.getJSONObject("center").getDouble("lat")
+                        val lon = if (el.has("lon")) el.getDouble("lon") else el.getJSONObject("center").getDouble("lon")
+                        val tags = el.optJSONObject("tags")
+                        val name = tags?.optString("name") ?: tags?.optString("name:en") ?: "Unnamed Hospital"
+                        val p = GeoPoint(lat, lon)
+                        results.add(Triple(name, p, String.format(Locale.US, "%.1f km", centerLoc.distanceToAsDouble(p)/1000.0)))
+                    }
+                    withContext(Dispatchers.Main) { 
+                        nearbyHospitals = results.sortedBy { it.second.distanceToAsDouble(centerLoc) }
+                        isFetchingNearby = false 
+                    }
+                } catch (_: Exception) { withContext(Dispatchers.Main) { isFetchingNearby = false } }
+            }
+        }
     }
 
     LaunchedEffect(query) {
         if (query.isNotEmpty()) {
-            val filteredLocal = if (type == "hospital") {
-                localHospitals.filter { fuzzyMatch(query, it.first) }
-            } else {
-                (localPlaces + localHospitals).filter { fuzzyMatch(query, it.first) }
-            }
-            
-            searchResults = filteredLocal
-
-            if (query.length > 2) {
-                delay(600) 
-                isSearching = true
-                withContext(Dispatchers.IO) {
-                    try {
-                        val encodedQuery = URLEncoder.encode(if (type == "hospital") "$query hospital" else query, "UTF-8")
-                        val url = URL("https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=10&viewbox=$bangaloreBounds&bounded=1")
-                        val conn = url.openConnection() as HttpURLConnection
-                        conn.setRequestProperty("User-Agent", "AmbulanceApp/1.0")
-                        val response = conn.inputStream.bufferedReader().use { it.readText() }
-                        val jsonArray = JSONArray(response)
-                        val results = mutableListOf<Pair<String, GeoPoint>>()
-                        for (i in 0 until jsonArray.length()) {
-                            val item = jsonArray.getJSONObject(i)
-                            val name = item.getString("display_name")
-                            val lat = item.getDouble("lat")
-                            val lon = item.getDouble("lon")
-                            results.add(name to GeoPoint(lat, lon))
-                        }
-                        withContext(Dispatchers.Main) {
-                            val existingNames = searchResults.map { it.first.lowercase() }
-                            val newResults = results.filter { it.first.lowercase() !in existingNames }
-                            searchResults = searchResults + newResults
-                            isSearching = false
-                        }
-                    } catch (_: Exception) {
-                        withContext(Dispatchers.Main) { isSearching = false }
+            delay(400); isSearching = true
+            withContext(Dispatchers.IO) {
+                try {
+                    val url = "https://nominatim.openstreetmap.org/search?q=${URLEncoder.encode(if (type=="hospital") "$query hospital" else query, "UTF-8")}&format=json&limit=10&viewbox=$biasBounds&bounded=1"
+                    val response = URL(url).openConnection().apply { setRequestProperty("User-Agent", "AmbulanceApp/1.0") }.inputStream.bufferedReader().use { it.readText() }
+                    val jsonArray = JSONArray(response)
+                    val results = mutableListOf<Triple<String, GeoPoint, String>>()
+                    for (i in 0 until jsonArray.length()) {
+                        val item = jsonArray.getJSONObject(i)
+                        results.add(Triple(item.getString("display_name"), GeoPoint(item.getDouble("lat"), item.getDouble("lon")), ""))
                     }
-                }
+                    withContext(Dispatchers.Main) { searchResults = results; isSearching = false }
+                } catch (_: Exception) { withContext(Dispatchers.Main) { isSearching = false } }
             }
-        } else {
-            searchResults = emptyList()
-        }
+        } else { searchResults = emptyList() }
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
+        Surface(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars), color = Color.White) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onDismiss) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black) }
                     TextField(
-                        value = query,
-                        onValueChange = { query = it },
+                        value = query, onValueChange = { query = it },
                         placeholder = { Text(if (type == "patient") "Search pickup location..." else "Search hospital...") },
                         modifier = Modifier.weight(1f),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        singleLine = true,
-                        textStyle = TextStyle(color = Color.Black)
+                        colors = TextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                        singleLine = true, textStyle = TextStyle(color = Color.Black)
                     )
-                    if (isSearching) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                    } else if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Black) }
-                    }
+                    if (isSearching) { CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp) }
+                    else if (query.isNotEmpty()) { IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Black) } }
                 }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray)
+                if (isFetchingNearby && query.isEmpty()) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) }
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     if (type == "patient") {
                         item {
-                            ListItem(
-                                headlineContent = { Text("Pick from Map", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+                            ListItem(headlineContent = { Text("Pick from Map", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                                 leadingContent = { Icon(Icons.Default.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                                modifier = Modifier.clickable { onSelectOnMap() },
-                                colors = ListItemDefaults.colors(containerColor = Color.White)
-                            )
+                                modifier = Modifier.clickable { onSelectOnMap() }, colors = ListItemDefaults.colors(containerColor = Color.White))
                             HorizontalDivider(modifier = Modifier.alpha(0.5f), color = Color.LightGray)
                         }
                     }
-
                     if (query.isEmpty()) {
-                        val recents = sharedPref.getStringSet("recent_hospitals", setOf())?.toList() ?: listOf()
-                        if (type == "hospital" && recents.isNotEmpty()) {
-                            item { Text("Recent", modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray) }
-                            items(recents) { name ->
+                        if (type == "hospital") {
+                            item { Text("Hospitals Near Patient", modifier = Modifier.padding(16.dp, 12.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray) }
+                            items(nearbyHospitals) { (name, point, dist) ->
                                 ListItem(
-                                    headlineContent = { Text(name, color = Color.Black) },
-                                    leadingContent = { Icon(Icons.Default.History, contentDescription = null, tint = Color.Gray) },
-                                    modifier = Modifier.clickable { 
-                                        val point = localHospitals.find { it.first == name }?.second ?: GeoPoint(12.97, 77.59)
-                                        onLocationSelected(point, name) 
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = Color.White))
+                                    headlineContent = { Text(name, color = Color.Black, maxLines = 2) },
+                                    leadingContent = { Icon(Icons.Default.LocalHospital, contentDescription = null, tint = Color(0xFF4CAF50)) },
+                                    supportingContent = { Text(dist, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+                                    modifier = Modifier.clickable { onLocationSelected(point, name) },
+                                    colors = ListItemDefaults.colors(containerColor = Color.White)
+                                )
                             }
                         }
-                        item { Text("Suggestions", modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp), style = MaterialTheme.typography.labelMedium, color = Color.Gray) }
-                        val defaultList = if (type == "hospital") localHospitals else localPlaces
-                        items(defaultList) { (name, point) ->
-                            ListItem(
-                                headlineContent = { Text(name, color = Color.Black) },
-                                leadingContent = { Icon(if (type == "hospital") Icons.Default.LocalHospital else Icons.Default.Place, contentDescription = null, tint = Color.Gray) },
-                                modifier = Modifier.clickable { onLocationSelected(point, name) },
-                                colors = ListItemDefaults.colors(containerColor = Color.White)
-                            )
-                        }
                     } else {
-                        items(searchResults) { (name, point) ->
-                            ListItem(
-                                headlineContent = { Text(name, maxLines = 2, color = Color.Black) },
+                        items(searchResults) { (name, point, _) ->
+                            ListItem(headlineContent = { Text(name, maxLines = 3, color = Color.Black) },
                                 leadingContent = { Icon(if (type == "hospital") Icons.Default.LocalHospital else Icons.Default.Place, contentDescription = null, tint = Color.Gray) },
-                                modifier = Modifier.clickable { onLocationSelected(point, name) },
-                                colors = ListItemDefaults.colors(containerColor = Color.White)
-                            )
+                                modifier = Modifier.clickable { onLocationSelected(point, name) }, colors = ListItemDefaults.colors(containerColor = Color.White))
                         }
                     }
                 }
@@ -699,16 +694,13 @@ fun createMarkerIcon(context: Context, color: Int, label: String): Drawable {
     val bitmap = createBitmap(size, size, Bitmap.Config.ARGB_8888)
     bitmap.applyCanvas {
         val paint = Paint().apply { this.color = color; isAntiAlias = true }
-        
         val path = android.graphics.Path()
         path.moveTo(size/2f, size.toFloat())
         path.cubicTo(0f, size/2f, size/4f, 0f, size/2f, 0f)
         path.cubicTo(3*size/4f, 0f, size.toFloat(), size/2f, size/2f, size.toFloat())
         drawPath(path, paint)
-
         paint.color = android.graphics.Color.WHITE
         drawCircle(size / 2f, size / 3.5f, size / 6f, paint)
-        
         paint.apply { this.color = color; textSize = 32f; textAlign = Paint.Align.CENTER; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
         drawText(label, size / 2f, size / 3.5f + 12f, paint)
     }
@@ -722,12 +714,10 @@ fun createCurrentLocationIcon(context: Context): Drawable {
         val paint = Paint().apply { isAntiAlias = true }
         paint.color = android.graphics.Color.WHITE
         drawCircle(size / 2f, size / 2f, (size / 2f) - 5f, paint)
-        
         paint.color = "#FF0000".toColorInt()
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 6f
         drawCircle(size / 2f, size / 2f, (size / 2f) - 5f, paint)
-
         paint.style = Paint.Style.FILL
         paint.textSize = 50f
         paint.textAlign = Paint.Align.CENTER
@@ -835,7 +825,7 @@ fun ControlPanel(
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 
-                // Destination Selectors
+                // Location selectors hidden during active trip
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     LocationSelector(
                         label = "Patient Location",
@@ -877,7 +867,7 @@ fun ControlPanel(
                     }
                 }
             } else {
-                // Trip Active UI
+                // Trip Active UI - Focused view
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -912,15 +902,20 @@ fun ControlPanel(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(20.dp))
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(CircleShape),
-                    color = Color.Red,
-                    trackColor = Color(0xFFF1F3F4)
-                )
+                
+                // Progress bar stops once ETA is calculated (not "0 mins")
+                if (eta == "0 mins") {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape),
+                        color = Color.Red,
+                        trackColor = Color(0xFFF1F3F4)
+                    )
+                }
+                
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -1016,7 +1011,7 @@ fun PatientDetailsDialog(onDismiss: () -> Unit, onSubmit: (Map<String, String>) 
                 .fillMaxHeight(0.85f),
             shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(12.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
                 Text(
@@ -1054,7 +1049,7 @@ fun PatientDetailsDialog(onDismiss: () -> Unit, onSubmit: (Map<String, String>) 
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(selected = (condition == selectedCondition), onClick = { selectedCondition = condition })
@@ -1073,7 +1068,16 @@ fun PatientDetailsDialog(onDismiss: () -> Unit, onSubmit: (Map<String, String>) 
                         FilterChip(
                             selected = (severity == selectedSeverity),
                             onClick = { selectedSeverity = severity },
-                            label = { Text(severity) },
+                            label = { 
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = severity,
+                                        fontSize = 10.sp, // Reduced font size for severity labels
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                }
+                            },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -1111,8 +1115,7 @@ fun SmallFloatingTopBar(onBack: () -> Unit) {
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)

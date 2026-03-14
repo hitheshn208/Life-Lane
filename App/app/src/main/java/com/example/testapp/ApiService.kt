@@ -21,7 +21,7 @@ data class AuthResult(val isSuccess: Boolean, val message: String, val driverId:
 data class VerifyResult(val isValidAmbulance: Boolean, val message: String, val ambulance: Ambulance? = null)
 data class RegisterResult(val isSuccess: Boolean, val message: String, val registrationId: Int? = null, val ambulance: Ambulance? = null)
 data class MyAmbulancesResult(val isSuccess: Boolean, val ambulances: List<Ambulance> = emptyList(), val message: String? = null)
-data class TripResult(val isSuccess: Boolean, val message: String, val tripId: Int? = null)
+data class TripResult(val isSuccess: Boolean, val message: String, val tripId: Int? = null, val statusCode: Int = 0)
 
 object ApiService {
     private const val TIMEOUT = 5000
@@ -284,12 +284,34 @@ object ApiService {
             
             val resJson = JSONObject(response)
             if (code == 201) {
-                TripResult(true, resJson.getString("message"), resJson.optJSONObject("trip")?.optInt("id"))
+                TripResult(true, resJson.getString("message"), resJson.optJSONObject("trip")?.optInt("id"), code)
             } else {
-                TripResult(false, resJson.optString("message", "Failed to start trip"))
+                TripResult(false, resJson.optString("message", "Failed to start trip"), statusCode = code)
             }
         } catch (e: Exception) {
             TripResult(false, "Network error: ${e.message}")
+        }
+    }
+
+    suspend fun deactivateTrip(token: String, driverId: String, vehicleId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("${Config.BASE_URL}/api/trips/active/deactivate")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.connectTimeout = TIMEOUT
+            conn.readTimeout = TIMEOUT
+
+            val json = JSONObject().apply {
+                put("driver_id", driverId)
+                put("vehicle_id", vehicleId)
+            }
+            conn.outputStream.use { it.write(json.toString().toByteArray()) }
+            conn.responseCode in 200..299
+        } catch (e: Exception) {
+            false
         }
     }
 }
