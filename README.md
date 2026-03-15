@@ -703,59 +703,6 @@ AI systems could analyze traffic patterns and **predict congestion before emerge
 <img src="https://user-images.githubusercontent.com/74038190/216656965-9c22b7c0-3d1b-4c35-bfa1-4f2d4e4b43b1.gif" width="100%">
 </p>
 
----
-
-# ⚠️ TRAFFIC GRID ALERT
-
-```diff
-- SYSTEM WARNING : EMERGENCY RESPONSE DELAY DETECTED
-- TRAFFIC INFRASTRUCTURE CONFLICT
-- URBAN CONGESTION LEVEL : CRITICAL
-```
-
-```bash
-$ scanning-city-traffic-grid
-> intersections scanned : 124
-> congestion detected : HIGH
-> emergency priority lanes : NOT AVAILABLE
-> response time delay : 4 - 8 minutes
-```
-
-Urban traffic congestion frequently **blocks ambulances during critical emergencies**, preventing rapid hospital access.
-
-```
-[ TRAFFIC SIGNAL DELAYS ]
-[ INTERSECTION CONGESTION ]
-[ BLOCKED LANES ]
-[ HUMAN RESPONSE DEPENDENCY ]
-```
-
-These obstacles create **dangerous delays during life-threatening situations where every second matters.**
-
----
-
-# 💡 GREEN CORRIDOR PROTOCOL ACTIVATED
-
-```diff
-+ EMERGENCY TRAFFIC PROTOCOL INITIALIZED
-+ AMBULANCE PRIORITY MODE ENABLED
-+ TRAFFIC SIGNAL OVERRIDE READY
-```
-
-```bash
-$ launching-smart-green-corridor-system
-> connecting to traffic grid
-> linking GPS ambulance node
-> calculating optimal emergency route
-> activating signal override protocol
-```
-
-The **Smart Green Corridor System** dynamically creates a **real-time green corridor for ambulances**.
-
-Instead of manual coordination, traffic signals are automatically synchronized to **clear intersections before the ambulance arrives**.
-
----
-
 # ⚙️ SYSTEM ARCHITECTURE
 
 ```bash
@@ -783,72 +730,6 @@ $ initializing-traffic-control-architecture
        ▼
 GREEN CORRIDOR CREATED
 ```
-
----
-
-# 🧠 TECHNOLOGY STACK
-
-```bash
-$ scanning-project-dependencies
-> mobile platform detected
-> backend infrastructure ready
-> database storage active
-```
-
-## 📱 Android Application
-
-Kotlin is used to develop the **Android mobile application** for ambulance drivers.
-
-<p align="center">
-<img src="https://skillicons.dev/icons?i=kotlin,androidstudio"/>
-</p>
-
----
-
-## 🌐 Web Dashboard
-
-HTML and CSS are used to design the **central web dashboard** for monitoring traffic signals and ambulance movement.
-
-<p align="center">
-<img src="https://skillicons.dev/icons?i=html,css"/>
-</p>
-
----
-
-## ⚙️ Backend API
-
-Express.js is used to build backend APIs that manage communication between the mobile app, dashboard, and database.
-
-<p align="center">
-<img src="https://skillicons.dev/icons?i=nodejs"/>
-</p>
-
----
-
-## 💾 Database
-
-SQLite3 stores application data including ambulance sessions and route information.
-
----
-
-# 📊 SYSTEM IMPACT
-
-```bash
-$ analysing-emergency-response-performance
-> traffic delay reduction : active
-> signal wait time : minimized
-> emergency efficiency : increased
-```
-
-| Impact Area | Improvement |
-|-------------|-------------|
-| Ambulance Travel Time | Reduced |
-| Signal Waiting Time | Eliminated |
-| Emergency Response | Faster |
-| Traffic Coordination | Automated |
-
----
-
 # 🚀 FUTURE SCOPE
 
 ```bash
@@ -901,31 +782,10 @@ $ scanning-contributors
 
 | Member | Role |
 |------|------|
-| **Hitesh N** | Team Leader • Backend Development • Database Architecture |
+| **N Hithesh Kumar** | Team Leader • Backend Development • Database Architecture |
 | **Shyamanth Shetty** | Frontend Development • UI/UX Design |
 | **Amith Braggs** | Mobile Application Development |
 | **Alston Prince** | Mobile Application Development |
-
----
-
-## ⚙️ TEAM RESPONSIBILITY MAP
-
-```
-BACKEND + DATABASE
-        │
-        ▼
-Hitesh N
-
-FRONTEND + DESIGN
-        │
-        ▼
-Shyamanth Shetty
-
-MOBILE APPLICATION
-        │
-        ▼
-Amith Braggs + Alston Prince
-```
 
 ---
 
