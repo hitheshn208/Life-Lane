@@ -5,7 +5,7 @@
 -->
 
 <p align="center">
-  <img src="Front End (web page)/LogoBG.png" width="160" alt="Life Lane logo" />
+  <img src="Logo_Reveal.gif" width="160" alt="Life Lane logo" />
 </p>
 
 <h1 align="center">Life Lane</h1>
