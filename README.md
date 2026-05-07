@@ -10,7 +10,7 @@
 
 <h1 align="center">Life Lane</h1>
 <p align="center"><b>A faster path for ambulances through city traffic.</b></p>
----
+
 
 ## What is Life Lane?
 In urban traffic, emergency vehicles lose valuable time at signals and congested junctions. **Life Lane** is our hackathon-built system that aims to **reduce ambulance delays** by enabling a **priority “green lane” flow**—so an ambulance can move through key intersections with fewer stops and smoother passage.
