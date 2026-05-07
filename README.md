@@ -10,12 +10,6 @@
 
 <h1 align="center">Life Lane</h1>
 <p align="center"><b>A faster path for ambulances through city traffic.</b></p>
-
-<p align="center">
-  <!-- One clean vibe gif -->
-  <img src="https://i.pinimg.com/originals/4b/1f/d7/4b1fd7170ad87f048af15f2fa54ff3b3.gif" height="336" width="236" alt="Life Lane gif" />
-</p>
-
 ---
 
 ## What is Life Lane?
